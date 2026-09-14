@@ -1582,7 +1582,7 @@ async def baucua(interaction: discord.Interaction):
         description=(
             'BirthdayTime nhà cái đến từ Châu Phi\n\n'
             'Đặt cược bằng cách chọn một con\n'
-            'Các mem có <a:clock:1548984730765099088>30 giây đặt cược, hãy cẩn trọng trước khi cược!'
+            'Các mem có 30 giây đặt cược, hãy cẩn trọng trước khi cược!'
         ),
         color=discord.Color.from_rgb(0, 0, 0),
     )
@@ -1597,7 +1597,7 @@ async def baucua(interaction: discord.Interaction):
         embed.description = (
             'BirthdayTime nhà cái đến từ Châu Phi\n\n'
             'Đặt cược bằng cách chọn một con\n'
-            f'Các mem có <a:clock:1548984730765099088>{remaining} giây đặt cược, hãy cẩn trọng trước khi cược!'
+            f'Các mem có {remaining} giây đặt cược, hãy cẩn trọng trước khi cược!'
         )
         try:
             await game_message.edit(embed=embed, view=view)

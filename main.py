@@ -2079,3 +2079,12 @@ async def on_ready():
             print(f"[KEOBO] Lỗi đồng bộ slash command: {e}")
 
     print(f"[BOT] Đã đăng nhập: {bot.user}")
+
+# ===== KHOI DONG BOT TREN RAILWAY =====
+# Dat token Discord trong Railway Variables voi ten: DISCORD_TOKEN
+TOKEN = os.getenv("DISCORD_TOKEN")
+
+if not TOKEN:
+    raise RuntimeError("Chua dat bien moi truong DISCORD_TOKEN tren Railway")
+
+bot.run(TOKEN)

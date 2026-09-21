@@ -1578,8 +1578,6 @@ class SnakeView(discord.ui.View):
             "**Hãy bấm nút di chuyển để điều khiển bot**\n"
             f"**Điểm: {self.score}**\n\n"
             f"{self._board_text()}\n\n"
-            "          ⬆️\n"
-            "   ⬅️  ⬇️  ➡️"
         )
         if status:
             description += f"\n\n{status}"

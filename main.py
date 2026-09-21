@@ -1365,10 +1365,10 @@ class NineBoxButton(discord.ui.Button):
                 if isinstance(item, NineBoxButton):
                     item.disabled = True
                     if item.index == game["mine"]:
-                        item.label = "❌"
+                        item.label = "<a:failed:1548973085741547580>"
                         item.style = discord.ButtonStyle.danger
                     elif item.index in game["revealed"]:
-                        item.label = "✓"
+                        item.label = "<a:verify:1548178353859596320>"
                         item.style = discord.ButtonStyle.success
                     else:
                         item.label = "?"
@@ -1395,7 +1395,7 @@ class NineBoxButton(discord.ui.Button):
             return
 
         # Ô an toàn.
-        self.label = "✓"
+        self.label = "<a:verify:1548178353859596320>"
         self.style = discord.ButtonStyle.success
 
         safe_count = len(game["revealed"])
@@ -1405,17 +1405,17 @@ class NineBoxButton(discord.ui.Button):
                 if isinstance(item, NineBoxButton):
                     item.disabled = True
                     if item.index == game["mine"]:
-                        item.label = "❌"
+                        item.label = "<a:failed:1548973085741547580>"
                         item.style = discord.ButtonStyle.danger
                     elif item.index in game["revealed"]:
-                        item.label = "✓"
+                        item.label = "<a:verify:1548178353859596320>"
                         item.style = discord.ButtonStyle.success
                     else:
-                        item.label = "✓"
+                        item.label = "<a:verify:1548178353859596320>"
                         item.style = discord.ButtonStyle.success
 
             embed = make_embed(
-                title="🎉 GAME 9 Ô • HOÀN THÀNH",
+                title="🎉 GAME MÌN• HOÀN THÀNH",
                 description=(
                     f"{interaction.user.mention} đã mở **8/8 ô an toàn**!\n\n"
                     "🎉 **Tất cả ô đã an toàn. Bạn thắng!**\n"
@@ -1773,7 +1773,7 @@ def game_coin_reward_embed(game_name, winners, reward, winner_label):
 
 class BauCuaBetModal(discord.ui.Modal, title='Đặt cược Bầu Cua'):
     amount = discord.ui.TextInput(
-        label='Số coin muốn đặt',
+        label='Số coin muốn đặt (tối thiểu là 250.000)',
         placeholder='Nhập số coin của mem dùng để cược! (tối đa 250.000)',
         required=True,
         max_length=12,

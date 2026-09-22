@@ -2437,6 +2437,9 @@ async def noitu_schedule_timeout(channel_id: int):
             return
         if game.get("timeout_token", 0) != game.get("last_activity", 0):
             return
+        # Mỗi lần hết 30 giây, bot chỉ được tự nối tối đa 1 lần.
+        if game.get("bot_auto_used"):
+            return
         required = game.get("required", "")
         bot_reply = noitu_find_reply(required, game["used"])
         if bot_reply is None:
@@ -2453,6 +2456,7 @@ async def noitu_schedule_timeout(channel_id: int):
         game["required"] = noitu_required_word(bot_reply)
         game["turn_user_id"] = None
         game["last_player_id"] = None
+        game["bot_auto_used"] = True
         embed = noitu_embed(
             "Nối từ • BirthdayTime",
             f"**Bot đã nối tiếp với từ:** {bot_reply}\n\n**Bạn hãy nối tiếp với từ:** {game['required']}",
@@ -2460,7 +2464,8 @@ async def noitu_schedule_timeout(channel_id: int):
         await bot.get_channel(channel_id).send(embed=embed)
         game["last_activity"] += 1
         game["timeout_token"] = game["last_activity"]
-        game["timeout_task"] = asyncio.create_task(noitu_schedule_timeout(channel_id))
+        # Bot chỉ tự nối 1 lần khi timeout; sau đó chờ người chơi.
+        game["timeout_task"] = None
     except asyncio.CancelledError:
         return
 
@@ -2487,6 +2492,7 @@ async def noitu_command(interaction: discord.Interaction):
         "last_activity": 0,
         "timeout_token": 0,
         "timeout_task": None,
+        "bot_auto_used": False,
     }
     embed = noitu_embed(
         "Nối từ • BirthdayTime",
@@ -2511,6 +2517,7 @@ async def noitu_start(channel):
         "last_player_id": None,
         "last_activity": 0,
         "timeout_token": 0,
+        "bot_auto_used": False,
     })
     embed = noitu_embed(
         "Nối từ • BirthdayTime",
@@ -2536,6 +2543,20 @@ async def on_message(message: discord.Message):
             await noitu_error(message.channel, "Ván Nối từ đã bắt đầu rồi")
         else:
             await noitu_start(message.channel)
+        return
+
+    # !stop: dừng ván Nối từ hiện tại trong kênh.
+    if message.content.strip().lower() == "!stop":
+        if not game or game.get("finished"):
+            await noitu_error(message.channel, "Không có ván Nối từ nào đang chạy")
+        else:
+            if game.get("timeout_task"):
+                game["timeout_task"].cancel()
+            NOITU_GAMES.pop(channel_id, None)
+            await message.channel.send(embed=noitu_embed(
+                "Nối từ • BirthdayTime",
+                "Ván Nối từ đã được dừng.",
+            ))
         return
 
     if game and game.get("started") and not game.get("finished"):
@@ -2565,6 +2586,7 @@ async def on_message(message: discord.Message):
         game["turn_user_id"] = message.author.id
         game["last_activity"] += 1
         game["timeout_token"] = game["last_activity"]
+        game["bot_auto_used"] = False
         if game.get("timeout_task"):
             game["timeout_task"].cancel()
 

@@ -2419,7 +2419,118 @@ NOITU_WORDS = [
     "cá vàng", "vàng bạc", "bạc hà", "hà nội", "nội dung",
     "dung dịch", "dịch bệnh", "bệnh viện", "viện trợ", "trợ giúp",
     "giúp đỡ", "đỡ đầu", "đầu bếp", "bếp núc", "núc ních",
+
+    # Mở rộng kho từ nối
+    "anh em", "em bé", "bé trai", "trai trẻ", "trẻ nhỏ", "nhỏ bé",
+    "bé ngoan", "ngoan ngoãn", "ngoãn mục", "mục tiêu", "tiêu chuẩn",
+    "chuẩn bị", "bị động", "động lực", "lực lượng", "lượng giác",
+    "giác quan", "quan tâm", "tâm trạng", "trạng thái", "thái độ",
+    "độ cao", "cao lớn", "lớn mạnh", "mạnh mẽ", "mẽ ngoài", "ngoài trời",
+    "trời xanh", "xanh lá", "lá cây", "cây cối", "cối xay", "xay bột",
+    "bột mì", "mì tôm", "tôm hùm", "hùm beo", "beo béo", "béo phì",
+    "phì nhiêu", "nhiêu khê", "khê nồng", "nồng nhiệt", "nhiệt độ",
+    "độ ẩm", "ẩm thực", "thực phẩm", "phẩm chất", "chất lượng",
+    "lượng mưa", "mưa rào", "rào chắn", "chắn gió", "gió mùa", "mùa hè",
+    "hè phố", "phố cổ", "cổ kính", "kính mắt", "mắt kính", "kính trọng",
+    "trọng lượng", "lượng tử", "tử tế", "tế bào", "bào chữa", "chữa bệnh",
+    "bệnh nhân", "nhân viên", "viên chức", "chức năng", "năng lực", "lực sĩ",
+    "sĩ quan", "quan chức", "chức vụ", "vụ án", "án phạt", "phạt tiền",
+    "tiền bạc", "bạc màu", "màu sắc", "sắc đẹp", "đẹp trai", "trai đẹp",
+    "đẹp mắt", "mắt xanh", "xanh biển", "biển cả", "cả nhà", "nhà cửa",
+    "cửa sổ", "sổ tay", "tay chân", "chân tay", "tay áo", "áo quần",
+    "quần áo", "áo dài", "dài hạn", "hạn chế", "chế độ", "độ tuổi",
+    "tuổi tác", "tác phẩm", "phẩm giá", "giá trị", "trị giá", "giá cả",
+    "cả ngày", "ngày mai", "mai sau", "sau này", "này nọ", "nọ kia",
+    "kia kìa", "kìa trời", "trời mưa", "mưa gió", "gió bão", "bão tố",
+    "tố cáo", "cáo buộc", "buộc tội", "tội lỗi", "lỗi lầm", "lầm lỗi",
+    "lỗi thời", "thời gian", "gian hàng", "hàng hóa", "hóa đơn", "đơn hàng",
+    "hàng ngày", "ngày tháng", "tháng năm", "năm mới", "mới mẻ", "mẻ cá",
+    "cá biển", "biển xanh", "xanh ngắt", "ngắt lời", "lời nói", "nói chuyện",
+    "chuyện trò", "trò chơi", "chơi game", "game thủ", "thủ công", "công việc",
+    "việc làm", "làm việc", "việc nhà", "nhà trường", "trường học", "học tập",
+    "tập thể", "thể thao", "thao tác", "tác động", "động cơ", "cơ hội",
+    "hội nhóm", "nhóm bạn", "bạn bè", "bè bạn", "bạn thân", "thân thiện",
+    "thiện chí", "chí hướng", "hướng dẫn", "dẫn đường", "đường phố", "phố xá",
+    "xá lợi", "lợi ích", "ích lợi", "lợi nhuận", "nhuận bút", "bút mực",
+    "mực tím", "tím ngắt", "ngắt quãng", "quãng đường", "đường dài", "dài dòng",
+    "dòng sông", "sông núi", "núi non", "non nước", "nước biển", "biển đảo",
+    "đảo xa", "xa xôi", "xôi chè", "chè xanh", "xanh biếc", "biếc xanh",
+    "xanh ngọc", "ngọc trai", "trai làng", "làng quê", "quê hương", "hương vị",
+    "vị ngọt", "ngọt ngào", "ngào đường", "đường phố", "phố phường", "phường hội",
+    "hội họp", "họp mặt", "mặt trời", "trời đất", "đất nước", "nước nhà",
+    "nhà nước", "nước mắt", "mắt lệ", "lệ phí", "phí phạm", "phạm vi",
+    "vi phạm", "phạm tội", "tội phạm", "phạm nhân", "nhân dân", "dân làng",
+    "làng xóm", "xóm làng", "làng nghề", "nghề nghiệp", "nghiệp vụ", "vụ việc",
+    "việc riêng", "riêng tư", "tư nhân", "nhân tạo", "tạo hình", "hình ảnh",
+    "ảnh đẹp", "đẹp đẽ", "đẽo gọt", "gọt giũa", "giũa móng", "móng tay",
+    "tay trái", "trái cây", "cây ăn", "ăn uống", "uống nước", "nước ngọt",
+    "ngọt lịm", "lịm dần", "dần dần", "dần tới", "tới nơi", "nơi chốn",
+    "chốn đông", "đông người", "người dân", "dân số", "số lượng", "lượng tiền",
+    "tiền lương", "lương tâm", "tâm hồn", "hồn nhiên", "nhiên liệu", "liệu pháp",
+    "pháp luật", "luật lệ", "lệ làng", "làng quê", "quê nhà", "nhà cửa",
+    "cửa hàng", "hàng quán", "quán ăn", "ăn sáng", "sáng sớm", "sớm mai",
+    "mai mốt", "mốt mới", "mới tinh", "tinh thần", "thần thái", "thái bình",
+    "bình an", "an toàn", "toàn diện", "diện tích", "tích cực", "cực kỳ",
+    "kỳ vọng", "vọng tưởng", "tưởng tượng", "tượng đài", "đài truyền", "truyền hình",
+    "hình học", "học đường", "đường học", "học hỏi", "hỏi thăm", "thăm hỏi",
+    "hỏi đáp", "đáp án", "án lệ", "lệ luật", "luật chơi", "chơi vui",
+    "vui vẻ", "vẻ đẹp", "đẹp lòng", "lòng tốt", "tốt bụng", "bụng dạ",
+    "dạ dày", "dày đặc", "đặc biệt", "biệt danh", "danh tiếng", "tiếng nói",
+    "nói thật", "thật lòng", "lòng tin", "tin tưởng", "tưởng niệm", "niệm Phật",
+    "Phật giáo", "giáo dục", "dục vọng", "vọng âm", "âm thanh", "thanh âm",
+    "âm nhạc", "nhạc cụ", "cụ thể", "thể hiện", "hiện tại", "tại sao",
+    "sao băng", "băng giá", "giá lạnh", "lạnh lẽo", "lẽ phải", "phải phép",
+    "phép tính", "tính toán", "toán học", "học thuật", "thuật toán", "toán tử",
+    "tử vi", "vi tính", "tính năng", "năng lượng", "lượng giác", "giác ngộ",
+    "ngộ nhận", "nhận xét", "xét duyệt", "duyệt binh", "binh lính", "lính gác",
+    "gác cổng", "cổng trường", "trường lớp", "lớp học", "học trò", "trò chuyện",
+    "chuyện vui", "vui chơi", "chơi đùa", "đùa vui", "vui vẻ", "vẻ vang",
+    "vang vọng", "vọng cổ", "cổ điển", "điển hình", "hình thức", "thức ăn",
+    "ăn ngon", "ngon miệng", "miệng cười", "cười vui", "vui nhộn", "nhộn nhịp",
+    "nhịp nhàng", "nhàng nhàng", "nhà giàu", "giàu có", "có ích", "ích kỷ",
+    "kỷ luật", "luật pháp", "pháp nhân", "nhân lực", "lực học", "học bổng",
+    "bổng lộc", "lộc tài", "tài năng", "năng khiếu", "khiếu nại", "nại nhân",
+    "nhân chứng", "chứng minh", "minh bạch", "bạch kim", "kim cương", "cương vị",
+    "vị trí", "trí tuệ", "tuệ giác", "giác đấu", "đấu tranh", "tranh luận",
+    "luận văn", "văn bản", "bản đồ", "đồ ăn", "ăn mặc", "mặc định", "định hướng",
+    "hướng nghiệp", "nghiệp đoàn", "đoàn kết", "kết quả", "quả bóng", "bóng đá",
+    "đá bóng", "bóng rổ", "rổ rá", "ráo riết", "riết róng", "róng rả",
+    "rả rích", "rích rắc", "rắc rối", "rối ren", "ren rỉ", "rỉ tai",
+    "tai nạn", "nạn nhân", "nhân ái", "ái ngại", "ngại ngùng", "ngùng ngoằng",
+    "ngoằng ngoèo", "ngoèo ngoặt", "ngoặt đường", "đường bộ", "bộ đội", "đội nhóm",
+    "nhóm lửa", "lửa cháy", "cháy nhà", "nhà bếp", "bếp lửa", "lửa trại",
+    "trại hè", "hè thu", "thu hoạch", "hoạch định", "định kỳ", "kỳ hạn",
+    "hạn sử dụng", "dụng cụ", "cụm từ", "từ ngữ", "ngữ pháp", "pháp lý",
+    "lý do", "do dự", "dự án", "án binh", "binh đoàn", "đoàn tàu", "tàu biển",
+    "biển số", "số nhà", "nhà máy", "máy móc", "móc khóa", "khóa cửa",
+    "cửa biển", "biển trời", "trời cao", "cao nguyên", "nguyên nhân", "nhân quả",
+    "quả thật", "thật sự", "sự thật", "thật thà", "thà rằng", "rằng buộc",
+    "buộc dây", "dây điện", "điện lực", "lực điện", "điện năng", "năng suất",
+    "suất ăn", "ăn trưa", "trưa hè", "hè nóng", "nóng lạnh", "lạnh giá",
+    "giá trị", "trị bệnh", "bệnh tật", "tật nguyền", "nguyền rủa", "rủa xả",
+    "xả nước", "nước sạch", "sạch sẽ", "sẽ đến", "đến nơi", "nơi đây",
+    "đây đó", "đó đây", "đây này", "này kia", "kia kìa", "kìa bạn", "bạn học",
+    "học nhóm", "nhóm trưởng", "trưởng nhóm", "nhóm chat", "chat game", "game online",
+    "online shop", "shop hàng", "hàng hiệu", "hiệu quả", "quả nhiên", "nhiên nhiên",
+    "nhiên liệu", "liệu trình", "trình độ", "độ khó", "khó khăn", "khăn giấy",
+    "giấy bút", "bút chì", "chì màu", "màu xanh", "xanh dương", "dương lịch",
+    "lịch sử", "sử dụng", "dụng tâm", "tâm lý", "lý luận", "luận điểm",
+    "điểm số", "số liệu", "liệu cơm", "cơm nước", "nước canh", "canh chua",
+    "chua ngọt", "ngọt thanh", "thanh mát", "mát mẻ", "mẻ lưới", "lưới cá",
+    "cá rô", "rô phi", "phi công", "công an", "an ninh", "ninh bình",
+    "bình minh", "minh họa", "họa sĩ", "sĩ diện", "diện mạo", "mạo hiểm",
+    "hiểm nguy", "nguy hiểm", "hiểm họa", "họa mi", "mi mắt", "mắt mũi",
+    "mũi tên", "tên lửa", "lửa đạn", "đạn dược", "dược phẩm", "phẩm màu",
+    "màu đỏ", "đỏ thắm", "thắm thiết", "thiết kế", "kế hoạch", "hoạch toán",
+    "toán tử", "tử số", "số học", "học viện", "viện nghiên cứu", "cứu hộ",
+    "hộ khẩu", "khẩu vị", "vị giác", "giác mạc", "mạc áo", "áo mưa",
+    "mưa xuân", "xuân hè", "hè sang", "sang trọng", "trọng tài", "tài chính",
+    "chính sách", "sách giáo khoa", "khoa học", "học thuật", "thuật ngữ", "ngữ nghĩa",
+    "nghĩa vụ", "vụ mùa", "mùa màng", "màng nhện", "nhện giăng", "giăng lưới",
+    "lưới điện", "điện tử", "tử tế", "tế nhị", "nhịp tim", "tim mạch",
+    "mạch nước", "nước suối", "suối nguồn", "nguồn điện", "điện thoại", "thoại văn",
 ]
+
 
 
 def noitu_required_word(phrase: str) -> str:
@@ -5007,60 +5118,9 @@ async def before_sell(): await bot.wait_until_ready()
 
 # ══════════════════════════════════════════════════════════════════
 
-async def setup_onepiece_faction_channels(guild):
-    """Tạo/kiểm tra 2 kênh phe One Piece, không tạo trùng."""
-    channels = {}
-    targets = [("🏴‍☠️ Hải Tặc", "pirate"), ("⚓ Hải Quân", "marine")]
-
-    for name, key in targets:
-        channel = discord.utils.find(lambda c: c.name == name and isinstance(c, discord.TextChannel), guild.channels)
-        if channel is None:
-            try:
-                channel = await guild.create_text_channel(
-                    name,
-                    reason="One Piece setup: tạo kênh phe Hải Tặc/Hải Quân"
-                )
-            except discord.Forbidden:
-                continue
-            except discord.HTTPException:
-                continue
-        channels[key] = channel
-
-        # Đảm bảo bot có thể quản lý và gửi tin nhắn trong kênh.
-        try:
-            await channel.set_permissions(
-                guild.me,
-                view_channel=True,
-                send_messages=True,
-                read_message_history=True,
-                reason="One Piece setup permissions"
-            )
-        except (discord.Forbidden, discord.HTTPException):
-            pass
-
-        # ID đặc biệt luôn được phép xem cả hai kênh.
-        try:
-            member = guild.get_member(SPECIAL_ADMIN_ID)
-            if member is None:
-                member = await guild.fetch_member(SPECIAL_ADMIN_ID)
-            await channel.set_permissions(
-                member,
-                view_channel=True,
-                send_messages=True,
-                read_message_history=True,
-                reason="One Piece special user access"
-            )
-        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
-            pass
-
-    return channels
-
-@bot.tree.command(name="onepiece", description="🏴‍☠️ Setup One Piece và mở bảng điều khiển")
+@bot.tree.command(name="onepiece", description="🏴‍☠️ Mở bảng điều khiển One Piece")
 async def cmd_onepiece(interaction: discord.Interaction):
-    await interaction.response.defer()
-    await setup_onepiece_faction_channels(interaction.guild)
-    await interaction.followup.send(
-        content="✅ Đã setup One Piece: kiểm tra/tạo kênh 🏴‍☠️ Hải Tặc và ⚓ Hải Quân.",
+    await interaction.response.send_message(
         embed=build_main_embed(),
         view=OnePieceHubView()
     )

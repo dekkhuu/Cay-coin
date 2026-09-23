@@ -5124,12 +5124,25 @@ async def cmd_onepiece(interaction: discord.Interaction):
 
 @bot.event
 async def on_ready():
-    # Discord slash commands: đăng ký TRỰC TIẾP vào server được phép.
-    # Không phụ thuộc vào việc lệnh đã từng được sync global hay chưa.
+    # Đồng bộ slash command chỉ vào server được phép và dọn bản global cũ.
+    # Trước đây /onepiece từng được sync global, nên Discord có thể hiển thị
+    # đồng thời 1 bản global + 1 bản guild thành 2 /onepiece.
     try:
         guild_obj = discord.Object(id=ALLOWED_GUILD_ID)
 
-        # Xóa bản guild cũ rồi chép TOÀN BỘ command hiện có trong code vào guild.
+        # Giữ lại danh sách command hiện có trong code để có thể dùng lại sau khi
+        # dọn registry global cũ trên Discord.
+        current_commands = list(bot.tree.get_commands())
+
+        # 1) Xóa toàn bộ global command cũ trên Discord.
+        bot.tree.clear_commands(guild=None)
+        await bot.tree.sync()
+
+        # 2) Khôi phục các command trong code vào local command tree.
+        for command in current_commands:
+            bot.tree.add_command(command)
+
+        # 3) Chỉ đăng ký các command đó vào guild mục tiêu.
         bot.tree.clear_commands(guild=guild_obj)
         bot.tree.copy_global_to(guild=guild_obj)
         synced_guild = await bot.tree.sync(guild=guild_obj)

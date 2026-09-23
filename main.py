@@ -2780,11 +2780,8 @@ SELL_REFRESH_SECONDS = 3600
 LEADERBOARD_CONFIG_FILE = "leaderboard_config.json"
 SELL_CONFIG_FILE = "sell_config.json"
 
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-bot = commands.Bot(command_prefix="!", intents=intents)
-
+# Dùng chung bot instance đã khai báo ở đầu file.
+# Không tạo bot instance thứ hai, nếu không các lệnh cũ sẽ bị mất khỏi tree.
 SKILLS = {
     "trái": [{"name": "Gomu Pistol", "xp_req": 0, "damage": 15},
              {"name": "Gomu Bazooka", "xp_req": 15, "damage": 25},
@@ -5127,22 +5124,21 @@ async def cmd_onepiece(interaction: discord.Interaction):
 
 @bot.event
 async def on_ready():
-    if not getattr(bot, "_merged_commands_synced", False):
-        try:
-            # Đồng bộ toàn bộ slash command lên server chính ngay lập tức.
-            # copy_global_to giúp các lệnh cũ (/masoi, /murder, /min, /snake,
-            # /baucua, /noitu...) xuất hiện cùng với /onepiece.
-            guild_obj = discord.Object(id=ALLOWED_GUILD_ID)
-            bot.tree.copy_global_to(guild=guild_obj)
-            synced_guild = await bot.tree.sync(guild=guild_obj)
+    # Discord slash commands: đăng ký TRỰC TIẾP vào server được phép.
+    # Không phụ thuộc vào việc lệnh đã từng được sync global hay chưa.
+    try:
+        guild_obj = discord.Object(id=ALLOWED_GUILD_ID)
 
-            # Đồng bộ global luôn để command vẫn hoạt động ở scope global nếu cần.
-            synced_global = await bot.tree.sync()
-            print(f"[BOT] Đã đồng bộ {len(synced_guild)} slash command vào server {ALLOWED_GUILD_ID}.")
-            print(f"[BOT] Đã đồng bộ {len(synced_global)} slash command global.")
-            bot._merged_commands_synced = True
-        except Exception as e:
-            print(f"[BOT] Lỗi đồng bộ slash command: {e}")
+        # Xóa bản guild cũ rồi chép TOÀN BỘ command hiện có trong code vào guild.
+        bot.tree.clear_commands(guild=guild_obj)
+        bot.tree.copy_global_to(guild=guild_obj)
+        synced_guild = await bot.tree.sync(guild=guild_obj)
+
+        names = [getattr(cmd, "name", "?") for cmd in synced_guild]
+        print(f"[BOT] Slash commands trong server {ALLOWED_GUILD_ID}: {names}")
+        print(f"[BOT] Đã sync {len(synced_guild)} slash commands vào server.")
+    except Exception as e:
+        print(f"[BOT] LỖI SYNC SLASH COMMAND: {type(e).__name__}: {e}")
 
     print(f"[BOT] Đã đăng nhập: {bot.user}")
 

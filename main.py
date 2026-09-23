@@ -42,6 +42,53 @@ intents.guilds = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+# ===== CHONG LOI BUTTON / INTERACTION =====
+async def _safe_view_on_error(view, interaction: discord.Interaction, error: Exception, item):
+    print(f"[BUTTON ERROR] {type(error).__name__}: {error}")
+    try:
+        message = "⚠️ Nút này vừa gặp lỗi. Hãy thử bấm lại hoặc mở lại bảng."
+        if isinstance(error, discord.NotFound):
+            message = "⚠️ Bảng này đã hết hạn hoặc tin nhắn không còn tồn tại. Hãy mở lại bảng."
+        elif isinstance(error, discord.Forbidden):
+            message = "⚠️ BirthdayTime không có đủ quyền để thực hiện thao tác này."
+        elif isinstance(error, discord.HTTPException):
+            message = "⚠️ Discord đang bận hoặc thao tác vừa hết hạn. Hãy thử lại."
+        if not interaction.response.is_done():
+            await interaction.response.send_message(message, ephemeral=True)
+        else:
+            await interaction.followup.send(message, ephemeral=True)
+    except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+        pass
+    except Exception as exc:
+        print(f"[BUTTON ERROR HANDLER] {exc}")
+
+discord.ui.View.on_error = _safe_view_on_error
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        return
+    original = getattr(error, "original", error)
+    print(f"[COMMAND ERROR] {ctx.command}: {type(original).__name__}: {original}")
+    try:
+        if ctx.channel:
+            await ctx.send("⚠️ Lệnh vừa gặp lỗi. Hãy thử lại sau.", delete_after=8)
+    except (discord.Forbidden, discord.HTTPException):
+        pass
+
+@bot.tree.error
+async def on_app_command_error(interaction: discord.Interaction, error):
+    original = getattr(error, "original", error)
+    print(f"[SLASH ERROR] {type(original).__name__}: {original}")
+    try:
+        message = "⚠️ Lệnh vừa gặp lỗi. Hãy thử lại sau."
+        if not interaction.response.is_done():
+            await interaction.response.send_message(message, ephemeral=True)
+        else:
+            await interaction.followup.send(message, ephemeral=True)
+    except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+        pass
+
 db_conn = sqlite3.connect('database.db')
 
 db_cursor = db_conn.cursor()
@@ -1644,7 +1691,7 @@ class SnakeView(discord.ui.View):
     def embed(self, status=""):
         title = "🐍 Sâu ăn táo" if not self.game_over else "🏆 🐍 Sâu ăn táo — KẾT THÚC"
         description = (
-            "**Hãy bấm nút di chuyển để điều khiển bot**\n"
+            "**Hãy bấm nút di chuyển để điều khiển Rắn**\n"
             f"**Điểm: {self.score}**\n\n"
             f"{self._board_text()}"
         )
@@ -2977,8 +3024,8 @@ SHOP_DATA = {
         "magnet": {"name": "Magnet", "price": 6000000, "rarity": "Mythical", "sea": 1, "emoji": "<:Magnet:1552137076408057886>"},
         "kitsune": {"name": "Kitsune", "price": 8000000, "rarity": "Mythical", "sea": 1, "emoji": "<:Kitsune:1552137395095339088>"},
         "control": {"name": "Control", "price": 9000000, "rarity": "Mythical", "sea": 1, "emoji": "<:Control:1552138369482362952>"},
-        "dragon_east": {"name": "Dragon East", "price": 15000000, "rarity": "LMythical", "sea": 1, "emoji": "<:Dragon_East:1552138428940816444>"},
-        "dragon_west": {"name": "Dragon West", "price": 15000000, "rarity": "LMythical", "sea": 1, "emoji": "<:Dragon_West:1552138668263604244>"},
+        "dragon_east": {"name": "Dragon East", "price": 15000000, "rarity": "Mythical", "sea": 1, "emoji": "<:Dragon_East:1552138428940816444>"},
+        "dragon_west": {"name": "Dragon West", "price": 15000000, "rarity": "Mythical", "sea": 1, "emoji": "<:Dragon_West:1552138668263604244>"},
 
         
     },

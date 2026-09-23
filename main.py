@@ -2822,6 +2822,82 @@ BOUNTY_RANKS = [
 ]
 GACHA_RATES = {"Common": 50.0, "Uncommon": 25.0, "Rare": 15.0, "Legendary": 8.0, "Mythical": 1.9, "King": 0.1}
 GACHA_COST = {"single": 100000, "x10": 900000, "x50": 4000000}
+
+def get_gacha_single_cost(player):
+    """Giá random x1 tăng 10.000 coin sau mỗi 10 level; giữ mốc gốc 100.000."""
+    level = max(1, int(player.get("level", 1)))
+    return GACHA_COST["single"] + (level // 10) * 10_000
+
+def get_gacha_cost(player, count):
+    if count == 1:
+        return get_gacha_single_cost(player)
+    if count == 10:
+        return get_gacha_single_cost(player) * 9
+    if count == 50:
+        return get_gacha_single_cost(player) * 40
+    raise ValueError("Số lượt random không hợp lệ")
+
+def roll_fruit(sea=1):
+    """Random 1 trái theo rarity; hỗ trợ cả LMythical của dữ liệu hiện tại."""
+    items = [(k, v) for k, v in SHOP_DATA["fruits"].items() if v.get("sea", 1) <= sea]
+    if not items:
+        return None
+    weighted = []
+    for key, item in items:
+        rarity = item.get("rarity", "Common")
+        if rarity == "LMythical":
+            rarity = "Mythical"
+        weight = GACHA_RATES.get(rarity, 0.0)
+        if weight > 0:
+            weighted.append((key, weight))
+    if not weighted:
+        key, _ = random.choice(items)
+        return key
+    keys = [k for k, _ in weighted]
+    weights = [w for _, w in weighted]
+    return random.choices(keys, weights=weights, k=1)[0]
+
+def give_fruits_to_player(player, results):
+    inv = player.setdefault("inventory", {}).setdefault("fruits", [])
+    new = []
+    for key in results:
+        if key and key not in inv:
+            inv.append(key)
+            new.append(key)
+    return new
+
+def build_gacha_embed(player):
+    single = get_gacha_single_cost(player)
+    x10 = single * 9
+    x50 = single * 40
+    return discord.Embed(
+        title="🎲 Random Trái Ác Quỷ",
+        description=(
+            f"🎯 **Random x1:** `{single:,}` Coin\n"
+            f"🎁 **Random x10:** `{x10:,}` Coin\n"
+            f"🌟 **Random x50:** `{x50:,}` Coin\n\n"
+            f"📊 Level hiện tại: **Lv.{player.get('level', 1)}**\n"
+            "💡 **Mỗi 10 level, giá random x1 tăng 10.000 Coin.**"
+        ),
+        color=0x9B59B6
+    )
+
+def build_gacha_result_embed(results, player, new_items=None, is_multi=False, free=False):
+    names = []
+    for key in results:
+        item = SHOP_DATA["fruits"].get(key)
+        if item:
+            names.append(f"{item['emoji']} **{item['name']}** • {item.get('rarity','Common')}")
+    title = "🎁 Random Trái Miễn Phí" if free else ("🎲 Kết Quả Random x10" if is_multi else "🎲 Kết Quả Random")
+    desc = "\n".join(names) if names else "❌ Không random được trái nào."
+    if free:
+        desc = "🎉 **Bạn nhận 1 lượt Random miễn phí khi mới tham gia!**\n\n" + desc
+    new_items = new_items or []
+    if new_items:
+        desc += "\n\n✅ **Trái mới nhận:** " + ", ".join(SHOP_DATA["fruits"][k]["name"] for k in new_items if k in SHOP_DATA["fruits"])
+    desc += f"\n\n💰 Coin hiện tại: `{player.get('coin',0):,}`\n📊 Level: `Lv.{player.get('level',1)}`"
+    return discord.Embed(title=title, description=desc, color=0x2ECC71)
+
 BATTLE_CONFIG = {"bounty_steal_pct": 0.20, "min_bounty": 100_000, "level_gap": 1000, "cooldown": 1800}
 SEA_DATA = {
     1: {
@@ -3495,6 +3571,7 @@ def update_stat_points(player):
 def create_player(faction):
     return {
         "faction": faction, "xp": 0, "coin": 0, "level": 1,
+        "free_random_used": False,
         "base_stats": {"defense": 1, "fruit": 1},
         "stats": {"defense": 1, "fruit": 1},
         "stat_points": 0, "last_level": 1, "current_hp": 120,
@@ -3912,10 +3989,20 @@ class ChooseFactionView(discord.ui.View):
         player_data[user.id] = create_player(faction)
         self.main_view.players[user.id] = {"user": user, "faction": faction}
         recalc_stats(player_data[user.id])
-        await interaction.response.edit_message(
-            embed=build_game_embed(faction),
-            view=GameMenuView(faction, user.id)
-        )
+        player = player_data[user.id]
+        # Người chơi mới nhận đúng 1 lượt Random trái miễn phí.
+        free_result = roll_fruit(player.get("current_sea", 1))
+        free_new = give_fruits_to_player(player, [free_result] if free_result else [])
+        player["free_random_used"] = True
+        if free_result:
+            fruit = SHOP_DATA["fruits"].get(free_result, {})
+            free_embed = build_gacha_result_embed([free_result], player, free_new, free=True)
+            await interaction.response.edit_message(embed=free_embed, view=GameMenuView(faction, user.id))
+        else:
+            await interaction.response.edit_message(
+                embed=build_game_embed(faction),
+                view=GameMenuView(faction, user.id)
+            )
 
 # ══════════════════════════════════════════════════════════════════
 # 🎮 GAME MENU (4 nút chính)
@@ -4438,9 +4525,15 @@ class WeaponChooseView(discord.ui.View):
 
 def build_fight_embed(player, weapon):
     mastery = player["mastery"].get(weapon, 0)
+    skill_lines = []
+    for idx, sk in enumerate(SKILLS.get(weapon, []), 1):
+        skill_lines.append(f"**{idx}. {sk['name']}** — {sk['damage']} DMG • cần {sk['xp_req']} XP")
     return discord.Embed(
         title=f"{WEAPON_EMOJI[weapon]} Chiến Đấu • {weapon.upper()}",
-        description=f"🔧 Thông thạo: `{mastery}`\n⭐ XP: `{player['xp']}`\n\nChọn chiêu!\n\u200b",
+        description=(
+            f"🔧 Thông thạo: `{mastery}`\n⭐ XP: `{player['xp']}`\n\n"
+            "✨ **Tên chiêu:**\n" + "\n".join(skill_lines) + "\n\nChọn chiêu!\n\u200b"
+        ),
         color=0x9B59B6
     )
 
@@ -4449,7 +4542,7 @@ class FightView(discord.ui.View):
         super().__init__(timeout=120)
         self.user_id = user_id; self.sea = sea; self.island_key = island_key; self.weapon = weapon
         for i, sk in enumerate(SKILLS[weapon]):
-            btn = discord.ui.Button(label=f"Chiêu {i+1}", emoji="✨", style=discord.ButtonStyle.primary, row=0)
+            btn = discord.ui.Button(label=sk["name"][:80], emoji="✨", style=discord.ButtonStyle.primary, row=0)
             btn.callback = self._atk(i); self.add_item(btn)
         back = discord.ui.Button(label="Quay Lại", emoji="↩️", style=discord.ButtonStyle.secondary, row=1)
         back.callback = self._back; self.add_item(back)
@@ -4464,9 +4557,11 @@ class FightView(discord.ui.View):
             p["last_fight"] = now
             res = simulate_fight(p, self.sea, self.island_key, self.weapon, idx)
             isl = SEA_DATA[self.sea]["islands"][self.island_key]
+            skill_name = SKILLS[self.weapon][idx]["name"] if idx < len(SKILLS.get(self.weapon, [])) else f"Chiêu {idx+1}"
             em = discord.Embed(
                 title=f"🏆 Thắng {res['monster']}!" if res['win'] else f"💀 Thua {res['monster']}!",
                 description=(
+                    f"✨ **Chiêu:** **{skill_name}**\n"
                     f"👹 HP: `{res['monster_hp']}`\n💥 Dmg: `{res['damage']}`\n\n" +
                     (f"💰 +`{res['coin']}`\n⭐ +`{res['xp']}`\n💰 Bounty +`{res['bounty_gain']}`\n" if res['win'] else "❌ Không nhận thưởng!") +
                     f"\n📊 Lv.`{p['level']}` | 🎯 `{p['quest_progress']}/{isl['quest_kill']}`"),
@@ -4649,9 +4744,9 @@ class GachaView(discord.ui.View):
         if i.user.id != self.user_id:
             await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
         p = player_data[self.user_id]
-        cost = GACHA_COST[cost_key]
+        cost = get_gacha_cost(p, count)
         if p["coin"] < cost:
-            await i.response.send_message(f"❌ Cần `{cost:,}` Coin!", ephemeral=True); return
+            await i.response.send_message(f"❌ Cần `{cost:,}` Coin! (Lv.{p.get('level',1)})", ephemeral=True); return
         p["coin"] -= cost
         results = []
         for _ in range(count):

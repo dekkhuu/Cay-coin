@@ -5129,8 +5129,17 @@ async def cmd_onepiece(interaction: discord.Interaction):
 async def on_ready():
     if not getattr(bot, "_merged_commands_synced", False):
         try:
-            synced = await bot.tree.sync()
-            print(f"[BOT] Đã đồng bộ {len(synced)} slash command.")
+            # Đồng bộ toàn bộ slash command lên server chính ngay lập tức.
+            # copy_global_to giúp các lệnh cũ (/masoi, /murder, /min, /snake,
+            # /baucua, /noitu...) xuất hiện cùng với /onepiece.
+            guild_obj = discord.Object(id=ALLOWED_GUILD_ID)
+            bot.tree.copy_global_to(guild=guild_obj)
+            synced_guild = await bot.tree.sync(guild=guild_obj)
+
+            # Đồng bộ global luôn để command vẫn hoạt động ở scope global nếu cần.
+            synced_global = await bot.tree.sync()
+            print(f"[BOT] Đã đồng bộ {len(synced_guild)} slash command vào server {ALLOWED_GUILD_ID}.")
+            print(f"[BOT] Đã đồng bộ {len(synced_global)} slash command global.")
             bot._merged_commands_synced = True
         except Exception as e:
             print(f"[BOT] Lỗi đồng bộ slash command: {e}")

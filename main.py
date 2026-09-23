@@ -5007,9 +5007,60 @@ async def before_sell(): await bot.wait_until_ready()
 
 # ══════════════════════════════════════════════════════════════════
 
-@bot.tree.command(name="onepiece", description="🏴‍☠️ Mở bảng điều khiển One Piece")
+async def setup_onepiece_faction_channels(guild):
+    """Tạo/kiểm tra 2 kênh phe One Piece, không tạo trùng."""
+    channels = {}
+    targets = [("🏴‍☠️ Hải Tặc", "pirate"), ("⚓ Hải Quân", "marine")]
+
+    for name, key in targets:
+        channel = discord.utils.find(lambda c: c.name == name and isinstance(c, discord.TextChannel), guild.channels)
+        if channel is None:
+            try:
+                channel = await guild.create_text_channel(
+                    name,
+                    reason="One Piece setup: tạo kênh phe Hải Tặc/Hải Quân"
+                )
+            except discord.Forbidden:
+                continue
+            except discord.HTTPException:
+                continue
+        channels[key] = channel
+
+        # Đảm bảo bot có thể quản lý và gửi tin nhắn trong kênh.
+        try:
+            await channel.set_permissions(
+                guild.me,
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True,
+                reason="One Piece setup permissions"
+            )
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
+        # ID đặc biệt luôn được phép xem cả hai kênh.
+        try:
+            member = guild.get_member(SPECIAL_ADMIN_ID)
+            if member is None:
+                member = await guild.fetch_member(SPECIAL_ADMIN_ID)
+            await channel.set_permissions(
+                member,
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True,
+                reason="One Piece special user access"
+            )
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+            pass
+
+    return channels
+
+@bot.tree.command(name="onepiece", description="🏴‍☠️ Setup One Piece và mở bảng điều khiển")
 async def cmd_onepiece(interaction: discord.Interaction):
-    await interaction.response.send_message(
+    await interaction.response.defer()
+    await setup_onepiece_faction_channels(interaction.guild)
+    await interaction.followup.send(
+        content="✅ Đã setup One Piece: kiểm tra/tạo kênh 🏴‍☠️ Hải Tặc và ⚓ Hải Quân.",
         embed=build_main_embed(),
         view=OnePieceHubView()
     )

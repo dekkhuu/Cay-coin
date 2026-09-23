@@ -4,6 +4,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import os
+import time
 
 import datetime
 
@@ -22,7 +23,6 @@ import urllib.parse
 import urllib.request
 
 import random
-import time
 
 
 import yt_dlp
@@ -1642,14 +1642,14 @@ class SnakeView(discord.ui.View):
                 item.disabled = self.game_over
 
     def embed(self, status=""):
-        title = "🐍 Sâu ăn táo" if not self.game_over else "🐍 Sâu ăn táo — KẾT THÚC"
+        title = "🐍 Sâu ăn táo" if not self.game_over else "🏆 🐍 Sâu ăn táo — KẾT THÚC"
         description = (
             "**Hãy bấm nút di chuyển để điều khiển bot**\n"
             f"**Điểm: {self.score}**\n\n"
-            f"{self._board_text()}\n\n"
-            "          ⬆️\n"
-            "   ⬅️  ⬇️  ➡️"
+            f"{self._board_text()}"
         )
+        if not self.game_over:
+            description += "\n\n          ⬆️\n   ⬅️  ⬇️  ➡️"
         if status:
             description += f"\n\n{status}"
 
@@ -1723,9 +1723,11 @@ class SnakeView(discord.ui.View):
 
             if self.apple is None:
                 self.game_over = True
+                # Hoàn thành game Rắn ăn mồi: thưởng 2.000 coin vào hệ thống coin chung.
+                baucua_change_coins(self.owner_id, 2000)
                 self._refresh_buttons()
                 await interaction.response.edit_message(
-                    embed=self.embed("🏆 Bạn đã ăn hết táo! **Bạn thắng!**"), view=self
+                    embed=self.embed("🪙 Nhận **2.000 coin**"), view=self
                 )
                 return
 
@@ -2355,11 +2357,6 @@ class NhanRoleModal(discord.ui.Modal, title='Nhận Role'):
             await interaction.response.send_message(f'<a:failed:1548973085741547580> Discord báo lỗi: `{e}`', ephemeral=True)
 
 
-@bot.tree.command(name='nhanrole', description='Mở form để nhận role')
-@discord.app_commands.checks.has_permissions(administrator=True)
-async def nhanrole(interaction: discord.Interaction):
-    await interaction.response.send_modal(NhanRoleModal())
-
 
 # =========================
 # GAME NỐI TỪ • BIRTHDAYTIME
@@ -2613,10 +2610,10 @@ async def on_message(message: discord.Message):
     await bot.process_commands(message)
 
 
-
-# ══════════════════════════════════════════════════════════════════
-# 🏴‍☠️ ONE PIECE GAME MODULE
-# ══════════════════════════════════════════════════════════════════
+# ============================================================
+# 🏴‍☠️ ONE PIECE — /onepiece (chỉ giữ 1 lệnh)
+# ============================================================
+TOKEN = os.getenv("DISCORD_TOKEN", "YOUR_BOT_TOKEN_HERE")
 MAX_LEVEL = 5000
 FIGHT_COOLDOWN = 3
 BOSS_COOLDOWN = 60
@@ -3461,10 +3458,75 @@ def simulate_boss(player, sea, island_key, weapon="trái", skill_index=4):
 # ══════════════════════════════════════════════════════════════════
 # 🖼️ EMBEDS CƠ BẢN
 # ══════════════════════════════════════════════════════════════════
+def get_hourly_fruit_stock(sea=1):
+    """Kho trái thay đổi tự động mỗi 60 phút, dùng chung theo từng Sea."""
+    items = {k: v for k, v in SHOP_DATA["fruits"].items() if v.get("sea", 1) <= sea}
+    if not items:
+        return []
+    hour_key = int(time.time() // 3600)
+    rng = random.Random(hour_key + sea * 1000003)
+    keys = list(items.keys())
+    count = min(5, len(keys))
+    return rng.sample(keys, count)
+
+def build_hourly_dealer_embed(player=None):
+    sea = player.get("current_sea", 1) if player else 1
+    stock = get_hourly_fruit_stock(sea)
+    lines = []
+    for key in stock:
+        item = SHOP_DATA["fruits"][key]
+        owned = player and key in player.get("inventory", {}).get("fruits", [])
+        mark = "✅" if owned else "🛒"
+        lines.append(f"{mark} {item['emoji']} **{item['name']}** — `{item['price']:,}` 💰 • {item['rarity']}")
+    now = int(time.time())
+    next_hour = ((now // 3600) + 1) * 3600
+    remain = max(0, next_hour - now)
+    h, rem = divmod(remain, 3600)
+    m, sec = divmod(rem, 60)
+    timer = f"{m:02d}:{sec:02d}" if h == 0 else f"{h:02d}:{m:02d}:{sec:02d}"
+    coin_line = f"\n💰 Coin: `{player['coin']:,}`" if player else ""
+    return discord.Embed(
+        title="🍎 Blox Fruits Dealer • Trái Ác Quỷ",
+        description=(f"**Kho hiện tại (đổi sau `{timer}`):**{coin_line}\n\n" + "\n".join(lines) +
+                     "\n\n🔄 Mỗi **1 giờ** hệ thống random lại 5 trái để bán."),
+        color=0xFFD700
+    )
+
+def build_onepiece_help_embed():
+    return discord.Embed(
+        title="📖 One Piece • Hướng Dẫn",
+        description=(
+            "**Các chức năng trong bảng /onepiece:**\n\n"
+            "👤 **Profile** — Xem hồ sơ nhân vật\n"
+            "💰 **Bounty** — Xem truy nã và BXH bounty\n"
+            "⚔️ **PvP** — Thách đấu người chơi khác\n"
+            "🎯 **Battle** — Xem Battle Bounty\n"
+            "👹 **Raid** — Đánh boss raid\n"
+            "🏆 **BXH** — Xem bảng xếp hạng\n"
+            "🍎 **Sell** — Mở Dealer trái, stock đổi mỗi 1 giờ\n"
+            "🛒 **Shop** — Mua trái đang được bán\n"
+            "🌾 **Farm** — Làm quest và đánh quái\n"
+            "🎲 **Random** — Gacha trái\n"
+            "✨ **Awakening** — Thức tỉnh trái\n\n"
+            "💡 Tất cả thao tác được thực hiện bằng nút, không cần gõ các lệnh phụ."
+        ),
+        color=0x3498DB
+    )
+
 def build_main_embed():
+    stock = get_hourly_fruit_stock(1)
+    stock_lines = []
+    for key in stock:
+        item = SHOP_DATA["fruits"][key]
+        stock_lines.append(f"{item['emoji']} **{item['name']}** — `{item['price']:,}` 💰")
     return discord.Embed(
         title="🏴‍☠️ One Piece • BirthdayTime",
-        description="Hãy bấm nút tham gia game để bắt đầu khám phá vùng biển One Piece!\n\n\u200b\n\u200b",
+        description=(
+            "Bấm **Tham Gia Game** để bắt đầu.\n\n"
+            "**🎮 Chức năng:** Profile • Bounty • PvP • Battle • Raid • BXH • Dealer\n\n"
+            "🍎 **Dealer trái hiện tại** *(đổi mỗi 1 giờ)*\n" + "\n".join(stock_lines) +
+            "\n\n💡 Các chức năng phụ đều nằm trong bảng này, không cần lệnh riêng.\n\u200b"
+        ),
         color=0xFFD700
     )
 
@@ -3537,142 +3599,137 @@ def build_stats_embed(player):
     )
 
 # ══════════════════════════════════════════════════════════════════
-# 🌐 KÊNH CHUNG TRADE / PVP
+# 🎮 JOIN GAME VIEW
 # ══════════════════════════════════════════════════════════════════
-async def get_or_create_public_game_channels(guild: discord.Guild):
-    """Tạo kênh Trade và PvP công khai cho tất cả thành viên."""
-    created = []
-    channel_specs = [
-        ("💱-trade", "Kênh Trade — tất cả thành viên trong server đều có thể vào."),
-        ("⚔️-pvp", "Kênh PvP — tất cả thành viên trong server đều có thể vào."),
-    ]
+class PvPModal(discord.ui.Modal, title="⚔️ Thách Đấu PvP"):
+    target = discord.ui.TextInput(
+        label="ID hoặc @mention người chơi",
+        placeholder="Ví dụ: 123456789012345678 hoặc @Tên",
+        required=True,
+        max_length=40
+    )
 
-    for channel_name, topic in channel_specs:
-        channel = discord.utils.get(guild.text_channels, name=channel_name)
-        if channel is None:
-            overwrites = {
-                guild.default_role: discord.PermissionOverwrite(
-                    view_channel=True,
-                    send_messages=True,
-                    read_message_history=True,
-                )
-            }
-            if guild.me is not None:
-                overwrites[guild.me] = discord.PermissionOverwrite(
-                    view_channel=True,
-                    send_messages=True,
-                    read_message_history=True,
-                    manage_channels=True,
-                )
-            channel = await guild.create_text_channel(
-                channel_name,
-                overwrites=overwrites,
-                topic=topic,
-                reason="One Piece public Trade/PvP channels",
-            )
-            created.append(channel)
-        else:
-            # Đảm bảo @everyone luôn được xem và chat trong 2 kênh này.
-            await channel.set_permissions(
-                guild.default_role,
-                view_channel=True,
-                send_messages=True,
-                read_message_history=True,
-            )
-
-    return created
-
-# ══════════════════════════════════════════════════════════════════
-# 🏴‍☠️ / ⚓ FACTION CHANNELS
-# ══════════════════════════════════════════════════════════════════
-async def get_or_create_faction_channel(guild: discord.Guild, faction: str, member: discord.Member):
-    """Tạo kênh phe và chỉ cho thành viên phe đó nhìn thấy."""
-    is_pirate = "Hải Tặc" in faction
-    channel_name = "🏴‍☠️-hai-tac" if is_pirate else "⚓-hai-quan"
-    topic = "Kênh riêng của phe Hải Tặc" if is_pirate else "Kênh riêng của phe Hải Quân"
-
-    # Tìm kênh phe đã tồn tại
-    channel = discord.utils.get(guild.text_channels, name=channel_name)
-
-    overwrites = {
-        guild.default_role: discord.PermissionOverwrite(view_channel=False),
-        member: discord.PermissionOverwrite(
-            view_channel=True,
-            send_messages=True,
-            read_message_history=True,
-            connect=True,
-        ),
-    }
-    if guild.me is not None:
-        overwrites[guild.me] = discord.PermissionOverwrite(
-            view_channel=True,
-            send_messages=True,
-            read_message_history=True,
-            manage_channels=True,
+    async def on_submit(self, interaction: discord.Interaction):
+        raw = str(self.target.value).strip().replace("<@", "").replace("<@!", "").replace(">", "")
+        try:
+            target_id = int(raw)
+        except ValueError:
+            await interaction.response.send_message("❌ Hãy nhập ID Discord hoặc @mention hợp lệ.", ephemeral=True)
+            return
+        if target_id == interaction.user.id:
+            await interaction.response.send_message("❌ Không thể tự thách đấu chính mình.", ephemeral=True)
+            return
+        target = bot.get_user(target_id)
+        if not target or target_id not in player_data:
+            await interaction.response.send_message("❌ Người chơi chưa tham gia One Piece hoặc không tìm thấy.", ephemeral=True)
+            return
+        if interaction.user.id not in player_data:
+            await interaction.response.send_message("❌ Bạn chưa tham gia One Piece. Hãy bấm Tham Gia Game trước.", ephemeral=True)
+            return
+        await interaction.response.send_message(
+            content=target.mention,
+            embed=build_battle_invite_embed(interaction.user, target),
+            view=PvPInviteView(interaction.user.id, target.id)
         )
 
-    # Admin có thể quản lý/xem cả hai kênh
-    for role in guild.roles:
-        if role.permissions.administrator and role != guild.default_role:
-            overwrites[role] = discord.PermissionOverwrite(view_channel=True)
+class OnePieceHubView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
 
-    if channel is None:
-        channel = await guild.create_text_channel(
-            channel_name,
-            overwrites=overwrites,
-            topic=topic,
-            reason="One Piece faction setup",
-        )
-        await channel.send(
-            embed=discord.Embed(
-                title=("🏴‍☠️ KÊNH HẢI TẶC" if is_pirate else "⚓ KÊNH HẢI QUÂN"),
-                description=(
-                    "Đây là kênh riêng của **Hải Tặc**. Thành viên Hải Quân không thể nhìn thấy kênh này."
-                    if is_pirate else
-                    "Đây là kênh riêng của **Hải Quân**. Thành viên Hải Tặc không thể nhìn thấy kênh này."
-                ),
-                color=0xE74C3C if is_pirate else 0x3498DB,
-            )
-        )
-    else:
-        # Thêm quyền cho người chơi mới mà không làm mất quyền cũ
-        await channel.set_permissions(
-            member,
-            view_channel=True,
-            send_messages=True,
-            read_message_history=True,
-        )
-        if guild.me is not None:
-            await channel.set_permissions(
-                guild.me,
-                view_channel=True,
-                send_messages=True,
-                read_message_history=True,
-                manage_channels=True,
-            )
+    async def _need_player(self, interaction):
+        if interaction.user.id not in player_data:
+            await interaction.response.send_message("❌ Bạn chưa tham gia One Piece. Hãy bấm **Tham Gia Game** trước.", ephemeral=True)
+            return None
+        return player_data[interaction.user.id]
 
-    return channel
+    @discord.ui.button(label="Tham Gia Game", emoji="⚔️", style=discord.ButtonStyle.success, row=0)
+    async def join(self, interaction, button):
+        if interaction.user.id in player_data:
+            p = normalize_player_loadout(player_data[interaction.user.id])
+            faction = p.get("faction", "🏴‍☠️ Hải Tặc")
+            await interaction.response.send_message(embed=build_game_embed(faction), view=GameMenuView(faction, interaction.user.id), ephemeral=True)
+            return
+        await interaction.response.send_message(embed=build_faction_embed(), view=ChooseFactionView(self), ephemeral=True)
 
+    @discord.ui.button(label="Profile", emoji="👤", style=discord.ButtonStyle.primary, row=0)
+    async def profile_btn(self, interaction, button):
+        p = await self._need_player(interaction)
+        if p is None: return
+        await interaction.response.send_message(embed=build_profile_embed(p, interaction.user), view=ProfileView(interaction.user.id), ephemeral=True)
+
+    @discord.ui.button(label="Bounty", emoji="💰", style=discord.ButtonStyle.primary, row=0)
+    async def bounty_btn(self, interaction, button):
+        p = await self._need_player(interaction)
+        if p is None: return
+        await interaction.response.send_message(embed=build_bounty_embed(interaction.user, p), view=BountyView(interaction.user.id), ephemeral=True)
+
+    @discord.ui.button(label="PvP", emoji="⚔️", style=discord.ButtonStyle.danger, row=0)
+    async def pvp_btn(self, interaction, button):
+        p = await self._need_player(interaction)
+        if p is None: return
+        await interaction.response.send_modal(PvPModal())
+
+    @discord.ui.button(label="Battle", emoji="🎯", style=discord.ButtonStyle.danger, row=0)
+    async def battle_btn(self, interaction, button):
+        p = await self._need_player(interaction)
+        if p is None: return
+        await interaction.response.send_message(embed=build_battle_bounty_embed(p, interaction.user), view=BattleBountyView(interaction.user.id), ephemeral=True)
+
+    @discord.ui.button(label="Raid", emoji="👹", style=discord.ButtonStyle.danger, row=1)
+    async def raid_btn(self, interaction, button):
+        p = await self._need_player(interaction)
+        if p is None: return
+        await interaction.response.send_message(embed=build_raid_menu_embed(p), view=RaidView(interaction.user.id), ephemeral=True)
+
+    @discord.ui.button(label="BXH Level", emoji="🏆", style=discord.ButtonStyle.primary, row=1)
+    async def lb_btn(self, interaction, button):
+        ranked = sorted(player_data.items(), key=lambda x: (x[1].get("level", 0), x[1].get("xp", 0)), reverse=True)[:10]
+        lines=[]
+        for idx,(uid,p) in enumerate(ranked,1):
+            u=bot.get_user(uid); name=u.display_name if u else f"User {uid}"
+            medal=["🥇","🥈","🥉"][idx-1] if idx<=3 else f"`{idx}.`"
+            lines.append(f"{medal} **{name}** — Lv.`{p.get('level',0)}` • XP `{p.get('xp',0):,}`")
+        await interaction.response.send_message(embed=discord.Embed(title="🏆 BXH Level",description="\n".join(lines) or "*Chưa có người chơi.*",color=0xFFD700),ephemeral=True)
+
+    @discord.ui.button(label="BXH Bounty", emoji="💎", style=discord.ButtonStyle.primary, row=1)
+    async def bounty_lb_btn(self, interaction, button):
+        ranked=sorted(player_data.items(), key=lambda x:x[1].get("bounty",0), reverse=True)[:10]
+        lines=[]
+        for idx,(uid,p) in enumerate(ranked,1):
+            u=bot.get_user(uid); name=u.display_name if u else f"User {uid}"
+            medal=["🥇","🥈","🥉"][idx-1] if idx<=3 else f"`{idx}.`"
+            lines.append(f"{medal} **{name}** — 💰 `{format_bounty(p.get('bounty',0))}`")
+        await interaction.response.send_message(embed=discord.Embed(title="💰 BXH Bounty",description="\n".join(lines) or "*Chưa có người chơi.*",color=0xFFD700),ephemeral=True)
+
+    @discord.ui.button(label="Sell", emoji="🍎", style=discord.ButtonStyle.success, row=1)
+    async def dealer_btn(self, interaction, button):
+        p = await self._need_player(interaction)
+        if p is None: return
+        await interaction.response.send_message(embed=build_hourly_dealer_embed(p), view=ShopView(interaction.user.id), ephemeral=True)
 
 class JoinGameView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         self.players = {}
 
-    @discord.ui.button(label="Start", emoji="▶️", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="Tham Gia Game", emoji="⚔️", style=discord.ButtonStyle.primary)
     async def join(self, interaction, button):
-        if interaction.guild is None:
-            await interaction.response.send_message("❌ Lệnh này chỉ dùng trong server!", ephemeral=True)
-            return
+        # Nếu người chơi đã tham gia, mở lại bảng game thay vì báo lỗi.
         if interaction.user.id in player_data:
-            await interaction.response.send_message("⚠️ Bạn đã tham gia rồi!", ephemeral=True)
+            player = normalize_player_loadout(player_data[interaction.user.id])
+            faction = player.get("faction", "🏴‍☠️ Hải Tặc")
+            self.players[interaction.user.id] = {"user": interaction.user, "faction": faction}
+            await interaction.response.send_message(
+                embed=build_game_embed(faction),
+                view=GameMenuView(faction, interaction.user.id),
+                ephemeral=True
+            )
             return
         await interaction.response.send_message(
             embed=build_faction_embed(),
             view=ChooseFactionView(self),
             ephemeral=True
         )
-
 
 class ChooseFactionView(discord.ui.View):
     def __init__(self, main_view):
@@ -3687,39 +3744,22 @@ class ChooseFactionView(discord.ui.View):
 
     async def _pick(self, interaction, faction):
         user = interaction.user
-        if interaction.guild is None:
-            await interaction.response.send_message("❌ Chỉ dùng trong server!", ephemeral=True)
-            return
+        # Tránh tạo lại nhân vật nếu người chơi bấm chọn phe nhiều lần.
         if user.id in player_data:
-            await interaction.response.send_message("⚠️ Bạn đã chọn phe rồi!", ephemeral=True)
-            return
-
-        try:
-            faction_channel = await get_or_create_faction_channel(interaction.guild, faction, user)
-        except discord.Forbidden:
-            await interaction.response.send_message(
-                "❌ Bot thiếu quyền **Quản lý kênh (Manage Channels)** để tạo kênh phe.",
-                ephemeral=True,
+            player = normalize_player_loadout(player_data[user.id])
+            faction = player.get("faction", faction)
+            self.main_view.players[user.id] = {"user": user, "faction": faction}
+            await interaction.response.edit_message(
+                embed=build_game_embed(faction),
+                view=GameMenuView(faction, user.id)
             )
             return
-        except Exception as e:
-            print(f"[Faction channel] {e}")
-            await interaction.response.send_message(
-                "❌ Không thể tạo kênh phe. Hãy kiểm tra quyền của bot.",
-                ephemeral=True,
-            )
-            return
-
         player_data[user.id] = create_player(faction)
-        self.main_view.players[user.id] = {"user": user, "faction": faction, "channel_id": faction_channel.id}
+        self.main_view.players[user.id] = {"user": user, "faction": faction}
         recalc_stats(player_data[user.id])
         await interaction.response.edit_message(
             embed=build_game_embed(faction),
             view=GameMenuView(faction, user.id)
-        )
-        await interaction.followup.send(
-            f"✅ Bạn đã vào **{faction}**! Kênh riêng của phe: {faction_channel.mention}",
-            ephemeral=True,
         )
 
 # ══════════════════════════════════════════════════════════════════
@@ -4001,42 +4041,55 @@ def build_profile_embed(player, user):
 # 🛒 SHOP VIEW
 # ══════════════════════════════════════════════════════════════════
 def build_shop_embed(player, category="fruits"):
-    items=SHOP_DATA["fruits"]; sea=player.get("current_sea",1)
-    filtered={k:v for k,v in items.items() if v["sea"]<=sea}; sorted_items=sorted(filtered.items(),key=lambda x:x[1]["price"])
+    stock = get_hourly_fruit_stock(player.get("current_sea", 1))
     lines=[]
-    for key,item in sorted_items[:8]:
-        owned=key in player.get("inventory",{}).get("fruits",[]); st="✅" if owned else "🛒"
-        lines.append(f"{st} {item['emoji']} **{item['name']}** — `{item['price']:,}` 💰 *({item['rarity']})*")
-    return discord.Embed(title="🛒 Shop • 🍎 Trái Ác Quỷ",description=f"💰 `{player['coin']:,}`\n🌊 Sea `{sea}/3`\n\n"+"\n".join(lines)+f"\n\n*Còn {max(0,len(sorted_items)-8)} vật phẩm...*\n\u200b",color=0xFFD700)
+    for key in stock:
+        item=SHOP_DATA["fruits"][key]
+        owned=key in player.get("inventory",{}).get("fruits",[])
+        mark="✅" if owned else "🛒"
+        lines.append(f"{mark} {item['emoji']} **{item['name']}** — `{item['price']:,}` 💰 • {item['rarity']}")
+    return build_hourly_dealer_embed(player).set_footer(text="Kho trái random lại mỗi 60 phút")
 
 class ShopView(discord.ui.View):
     def __init__(self,user_id,category="fruits",page=0):
-        super().__init__(timeout=180); self.user_id=user_id; self.category="fruits"; self.page=page
-        items=SHOP_DATA["fruits"]; sea=player_data[user_id].get("current_sea",1); filtered={k:v for k,v in items.items() if v["sea"]<=sea}; sorted_items=sorted(filtered.items(),key=lambda x:x[1]["price"])
-        per=5; start=page*per
-        for i,(key,item) in enumerate(sorted_items[start:start+per]):
-            btn=discord.ui.Button(label=item["name"][:12],emoji=item["emoji"],style=discord.ButtonStyle.success,row=0); btn.callback=self._buy(key); self.add_item(btn)
-        prev=discord.ui.Button(label="◀",emoji="⬅️",style=discord.ButtonStyle.secondary,row=1,disabled=page==0); prev.callback=self._prev; self.add_item(prev)
-        nxt=discord.ui.Button(label="▶",emoji="➡️",style=discord.ButtonStyle.secondary,row=1,disabled=(start+per>=len(sorted_items))); nxt.callback=self._next; self.add_item(nxt)
-        back=discord.ui.Button(label="Về Farm",emoji="↩️",style=discord.ButtonStyle.secondary,row=1); back.callback=self._back; self.add_item(back)
+        super().__init__(timeout=180)
+        self.user_id=user_id
+        self.category="fruits"
+        self.page=0
+        stock=get_hourly_fruit_stock(player_data[user_id].get("current_sea",1))
+        for idx,key in enumerate(stock):
+            item=SHOP_DATA["fruits"][key]
+            btn=discord.ui.Button(label=item["name"][:12],emoji=item["emoji"],style=discord.ButtonStyle.success,row=0)
+            btn.callback=self._buy(key)
+            self.add_item(btn)
+        back=discord.ui.Button(label="Về Menu",emoji="↩️",style=discord.ButtonStyle.secondary,row=1)
+        back.callback=self._back
+        self.add_item(back)
+
     def _buy(self,key):
         async def cb(i):
-            if i.user.id!=self.user_id: await i.response.send_message("⚠️ Không phải bạn!",ephemeral=True); return
-            p=player_data[self.user_id]; item=SHOP_DATA["fruits"][key]
-            if p["coin"]<item["price"]: await i.response.send_message(f"❌ Không đủ Coin! Cần `{item['price']:,}`.",ephemeral=True); return
-            if key in p.setdefault("inventory",{}).setdefault("fruits",[]): await i.response.send_message("⚠️ Bạn đã sở hữu trái này!",ephemeral=True); return
-            p["coin"]-=item["price"]; p["inventory"]["fruits"].append(key); p["equipped_fruit"]=key
-            await i.response.edit_message(embed=build_shop_embed(p),view=ShopView(self.user_id,"fruits",self.page)); await i.followup.send(f"✅ Mua và trang bị **{item['emoji']} {item['name']}**!",ephemeral=True)
+            if i.user.id!=self.user_id:
+                await i.response.send_message("⚠️ Không phải bạn!",ephemeral=True); return
+            p=player_data[self.user_id]
+            # Stock phải còn thuộc giờ hiện tại; sang giờ mới thì người chơi cần mở lại Dealer.
+            if key not in get_hourly_fruit_stock(p.get("current_sea",1)):
+                await i.response.send_message("⏰ Kho trái vừa đổi! Hãy mở lại Dealer.",ephemeral=True); return
+            item=SHOP_DATA["fruits"][key]
+            if p["coin"]<item["price"]:
+                await i.response.send_message(f"❌ Không đủ Coin! Cần `{item['price']:,}`.",ephemeral=True); return
+            if key in p.setdefault("inventory",{}).setdefault("fruits",[]):
+                await i.response.send_message("⚠️ Bạn đã sở hữu trái này!",ephemeral=True); return
+            p["coin"]-=item["price"]
+            p["inventory"]["fruits"].append(key)
+            p["equipped_fruit"]=key
+            await i.response.edit_message(embed=build_shop_embed(p),view=ShopView(self.user_id))
+            await i.followup.send(f"✅ Mua và trang bị **{item['emoji']} {item['name']}** với `{item['price']:,}` Coin!",ephemeral=True)
         return cb
-    async def _prev(self,i):
-        if i.user.id!=self.user_id:return
-        await i.response.edit_message(embed=build_shop_embed(player_data[self.user_id]),view=ShopView(self.user_id,"fruits",self.page-1))
-    async def _next(self,i):
-        if i.user.id!=self.user_id:return
-        await i.response.edit_message(embed=build_shop_embed(player_data[self.user_id]),view=ShopView(self.user_id,"fruits",self.page+1))
+
     async def _back(self,i):
-        if i.user.id!=self.user_id: await i.response.send_message("⚠️ Không phải bạn!",ephemeral=True); return
-        await i.response.edit_message(embed=build_farm_embed(player_data[self.user_id]),view=FarmView(self.user_id))
+        if i.user.id!=self.user_id: return
+        p=player_data[self.user_id]
+        await i.response.edit_message(embed=build_game_embed(p.get("faction","🏴‍☠️ Hải Tặc")),view=GameMenuView(p.get("faction","🏴‍☠️ Hải Tặc"),self.user_id))
 
 # ══════════════════════════════════════════════════════════════════
 # 🎒 INVENTORY VIEW
@@ -4906,242 +4959,13 @@ async def before_lb(): await bot.wait_until_ready()
 async def before_sell(): await bot.wait_until_ready()
 
 # ══════════════════════════════════════════════════════════════════
-# 📖 COMMANDS
-# ══════════════════════════════════════════════════════════════════
-@bot.tree.command(name="onepiece", description="🏴‍☠️ Setup bảng Start One Piece vào kênh hiện tại")
-@app_commands.checks.has_permissions(manage_guild=True)
-async def cmd_onepiece(interaction: discord.Interaction):
-    if interaction.guild is None:
-        await interaction.response.send_message("❌ Lệnh này chỉ dùng trong server!", ephemeral=True)
-        return
-    me = interaction.guild.me
-    if me is None or not interaction.channel.permissions_for(me).send_messages:
-        await interaction.response.send_message("❌ Bot không có quyền gửi tin nhắn trong kênh này!", ephemeral=True)
-        return
-    try:
-        await get_or_create_public_game_channels(interaction.guild)
-    except discord.Forbidden:
-        await interaction.response.send_message(
-            "❌ Bot thiếu quyền **Quản lý kênh (Manage Channels)** để tạo kênh Trade/PvP.",
-            ephemeral=True,
-        )
-        return
-    except Exception as e:
-        print(f"[Public game channels] {e}")
-        await interaction.response.send_message(
-            "❌ Không thể tạo kênh Trade/PvP. Hãy kiểm tra quyền của bot.",
-            ephemeral=True,
-        )
-        return
 
+@bot.tree.command(name="onepiece", description="🏴‍☠️ Mở bảng điều khiển One Piece")
+async def cmd_onepiece(interaction: discord.Interaction):
     await interaction.response.send_message(
         embed=build_main_embed(),
-        view=JoinGameView()
+        view=OnePieceHubView()
     )
-
-@bot.tree.command(name="profile", description="👤 Xem hồ sơ")
-@app_commands.describe(user="Người chơi (mặc định: bạn)")
-async def cmd_profile(interaction: discord.Interaction, user: discord.Member = None):
-    target = user or interaction.user
-    if target.id not in player_data:
-        await interaction.response.send_message(f"❌ **{target.display_name}** chưa tham gia!", ephemeral=True); return
-    p = player_data[target.id]
-    em = build_profile_embed(p, target)
-    if target.id == interaction.user.id:
-        await interaction.response.send_message(embed=em, view=ProfileView(target.id))
-    else:
-        await interaction.response.send_message(embed=em)
-
-@bot.tree.command(name="bounty", description="💰 Xem truy nã")
-@app_commands.describe(user="Người chơi (mặc định: bạn)")
-async def cmd_bounty(interaction: discord.Interaction, user: discord.Member = None):
-    target = user or interaction.user
-    if target.id not in player_data:
-        await interaction.response.send_message(f"❌ **{target.display_name}** chưa tham gia!", ephemeral=True); return
-    p = player_data[target.id]
-    em = build_bounty_embed(target, p)
-    if target.id == interaction.user.id:
-        await interaction.response.send_message(embed=em, view=BountyView(target.id))
-    else:
-        await interaction.response.send_message(embed=em)
-
-@bot.tree.command(name="pvp", description="⚔️ Thách đấu PvP")
-@app_commands.describe(opponent="Người chơi muốn thách đấu")
-async def cmd_pvp(interaction: discord.Interaction, opponent: discord.Member):
-    inv, tgt = interaction.user, opponent
-    if inv.id == tgt.id:
-        await interaction.response.send_message("❌ Không tự đánh mình!", ephemeral=True); return
-    if tgt.bot:
-        await interaction.response.send_message("❌ Không đánh bot!", ephemeral=True); return
-    if inv.id not in player_data:
-        await interaction.response.send_message("❌ Bạn chưa tham gia!", ephemeral=True); return
-    if tgt.id not in player_data:
-        await interaction.response.send_message(f"❌ **{tgt.display_name}** chưa tham gia!", ephemeral=True); return
-    if inv.id in user_in_battle:
-        await interaction.response.send_message("❌ Bạn đang bận!", ephemeral=True); return
-    if tgt.id in user_in_battle:
-        await interaction.response.send_message(f"❌ **{tgt.display_name}** đang bận!", ephemeral=True); return
-    await interaction.response.send_message(
-        content=f"📩 Lời mời PvP tới {tgt.mention}!",
-        embed=build_battle_invite_embed(inv, tgt),
-        view=PvPInviteView(inv.id, tgt.id)
-    )
-
-@bot.tree.command(name="battle", description="🎯 Battle Bounty — Đấu trường truy nã")
-async def cmd_battle(interaction: discord.Interaction):
-    if interaction.user.id not in player_data:
-        await interaction.response.send_message("❌ Chưa tham gia! Dùng `/onepiece`", ephemeral=True); return
-    p = player_data[interaction.user.id]
-    await interaction.response.send_message(
-        embed=build_battle_bounty_embed(p, interaction.user),
-        view=BattleBountyView(interaction.user.id)
-    )
-
-@bot.tree.command(name="raid", description="👹 Menu Raid Boss")
-async def cmd_raid(interaction: discord.Interaction):
-    if interaction.user.id not in player_data:
-        await interaction.response.send_message("❌ Chưa tham gia!", ephemeral=True); return
-    await interaction.response.send_message(
-        embed=build_raid_menu_embed(player_data[interaction.user.id]),
-        view=RaidView(interaction.user.id), ephemeral=True
-    )
-
-@bot.tree.command(name="xephang", description="🏆 Setup BXH Power")
-@app_commands.describe(channel="Kênh BXH")
-@app_commands.checks.has_permissions(manage_guild=True)
-async def cmd_xephang(interaction: discord.Interaction, channel: discord.TextChannel = None):
-    ch = channel or interaction.channel
-    gid = str(interaction.guild_id)
-    if not ch.permissions_for(interaction.guild.me).send_messages:
-        await interaction.response.send_message("❌ Bot không có quyền!", ephemeral=True); return
-    old = leaderboard_config.get(gid)
-    if old and gid != "bounty_channels":
-        try:
-            oc = interaction.guild.get_channel(old["channel_id"])
-            if oc:
-                om = await oc.fetch_message(old["message_id"]); await om.delete()
-        except: pass
-    await interaction.response.defer()
-    msg = await ch.send(embed=build_leaderboard_embed(interaction.guild))
-    leaderboard_config[gid] = {"channel_id": ch.id, "message_id": msg.id}
-    save_leaderboard_config()
-    await interaction.followup.send(f"✅ Setup BXH Power tại {ch.mention}!", ephemeral=True)
-
-@bot.tree.command(name="xephang-bounty", description="💰 Setup BXH Truy Nã")
-@app_commands.describe(channel="Kênh BXH")
-@app_commands.checks.has_permissions(manage_guild=True)
-async def cmd_xephang_bounty(interaction: discord.Interaction, channel: discord.TextChannel = None):
-    ch = channel or interaction.channel
-    gid = str(interaction.guild_id)
-    bc = leaderboard_config.get("bounty_channels", {})
-    if gid in bc:
-        try:
-            oc = interaction.guild.get_channel(bc[gid]["channel_id"])
-            if oc:
-                om = await oc.fetch_message(bc[gid]["message_id"]); await om.delete()
-        except: pass
-    await interaction.response.defer()
-    msg = await ch.send(embed=build_bounty_leaderboard_embed(interaction.guild))
-    if "bounty_channels" not in leaderboard_config:
-        leaderboard_config["bounty_channels"] = {}
-    leaderboard_config["bounty_channels"][gid] = {"channel_id": ch.id, "message_id": msg.id}
-    save_leaderboard_config()
-    await interaction.followup.send(f"✅ Setup BXH Bounty tại {ch.mention}!", ephemeral=True)
-
-@bot.tree.command(name="xephang-off", description="❌ Tắt tất cả BXH")
-@app_commands.checks.has_permissions(manage_guild=True)
-async def cmd_xephang_off(interaction: discord.Interaction):
-    gid = str(interaction.guild_id)
-    removed = []
-    if gid in leaderboard_config and gid != "bounty_channels":
-        cfg = leaderboard_config[gid]
-        try:
-            oc = interaction.guild.get_channel(cfg["channel_id"])
-            if oc:
-                try:
-                    om = await oc.fetch_message(cfg["message_id"]); await om.delete()
-                except: pass
-        except: pass
-        del leaderboard_config[gid]
-        removed.append("⚡ Power")
-    bc = leaderboard_config.get("bounty_channels", {})
-    if gid in bc:
-        try:
-            oc = interaction.guild.get_channel(bc[gid]["channel_id"])
-            if oc:
-                try:
-                    om = await oc.fetch_message(bc[gid]["message_id"]); await om.delete()
-                except: pass
-        except: pass
-        del bc[gid]
-        removed.append("💰 Bounty")
-    save_leaderboard_config()
-    if removed:
-        await interaction.response.send_message("✅ Đã tắt:\n" + "\n".join(f"• {r}" for r in removed), ephemeral=True)
-    else:
-        await interaction.response.send_message("⚠️ Chưa setup!", ephemeral=True)
-
-@bot.tree.command(name="sell", description="🛒 Setup shop trái tự động")
-@app_commands.describe(action="setup/refresh", channel="Kênh shop")
-@app_commands.choices(action=[
-    app_commands.Choice(name="setup", value="setup"),
-    app_commands.Choice(name="refresh", value="refresh"),
-])
-@app_commands.checks.has_permissions(manage_guild=True)
-async def cmd_sell(interaction: discord.Interaction, action: app_commands.Choice[str], channel: discord.TextChannel = None):
-    gid = str(interaction.guild_id)
-    ch = channel or interaction.channel
-    if action.value == "setup":
-        if not ch.permissions_for(interaction.guild.me).send_messages:
-            await interaction.response.send_message("❌ Bot không có quyền!", ephemeral=True); return
-        old = sell_config.get(gid)
-        if old:
-            try:
-                oc = interaction.guild.get_channel(old["channel_id"])
-                if oc:
-                    om = await oc.fetch_message(old["message_id"]); await om.delete()
-            except: pass
-        fruits = roll_random_fruits(5, 3)
-        sell_config[gid] = {"channel_id": ch.id, "message_id": 0, "fruits": fruits, "last_refresh": time.time()}
-        await interaction.response.defer()
-        msg = await ch.send(embed=build_sell_embed(gid), view=SellView(gid))
-        sell_config[gid]["message_id"] = msg.id
-        save_sell_config()
-        await interaction.followup.send(f"✅ Setup shop trái tại {ch.mention}!", ephemeral=True)
-    elif action.value == "refresh":
-        if gid not in sell_config:
-            await interaction.response.send_message("⚠️ Chưa setup!", ephemeral=True); return
-        refresh_sell_fruits(gid)
-        try:
-            cfg = sell_config[gid]
-            c = interaction.guild.get_channel(cfg["channel_id"])
-            if c:
-                m = await c.fetch_message(cfg["message_id"])
-                await m.edit(embed=build_sell_embed(gid), view=SellView(gid))
-        except: pass
-        await interaction.response.send_message("✅ Đã refresh!", ephemeral=True)
-
-@bot.tree.command(name="help", description="📖 Danh sách lệnh")
-async def cmd_help(interaction: discord.Interaction):
-    em = discord.Embed(title="📖 Danh Sách Lệnh", description=(
-        "**🎮 Người chơi:**\n"
-        "`/onepiece` — Setup bảng Start One Piece\n"
-        "`/profile [@user]` — Hồ sơ\n"
-        "`/bounty [@user]` — Truy nã\n"
-        "`/pvp @user` — PvP\n"
-        "`/battle` — Battle Bounty\n"
-        "`/raid` — Raid Boss\n\n"
-        "**⚙️ Admin:**\n"
-        "`/xephang [ch]` — BXH Power\n"
-        "`/xephang-bounty [ch]` — BXH Bounty\n"
-        "`/xephang-off` — Tắt BXH\n"
-        "`/sell setup` — Shop trái\n"
-        "`/sell refresh` — Refresh shop"), color=0xFFD700)
-    await interaction.response.send_message(embed=em, ephemeral=True)
-
-# ══════════════════════════════════════════════════════════════════
-# 🚀 READY + RUN
-# ══════════════════════════════════════════════════════════════════
 
 @bot.event
 async def on_ready():
@@ -5154,14 +4978,6 @@ async def on_ready():
             print(f"[BOT] Lỗi đồng bộ slash command: {e}")
 
     print(f"[BOT] Đã đăng nhập: {bot.user}")
-    try:
-        if not update_leaderboards.is_running():
-            update_leaderboards.start()
-        if not auto_refresh_sell.is_running():
-            auto_refresh_sell.start()
-        print("[ONE PIECE] Background tasks started")
-    except Exception as e:
-        print(f"[ONE PIECE] Không thể khởi động background tasks: {e}")
 
 # ===== KHOI DONG BOT TREN RAILWAY =====
 # Dat token Discord trong Railway Variables voi ten: DISCORD_TOKEN

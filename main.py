@@ -22,6 +22,7 @@ import urllib.parse
 import urllib.request
 
 import random
+import time
 
 
 import yt_dlp
@@ -2612,6 +2613,2536 @@ async def on_message(message: discord.Message):
     await bot.process_commands(message)
 
 
+
+# ══════════════════════════════════════════════════════════════════
+# 🏴‍☠️ ONE PIECE GAME MODULE
+# ══════════════════════════════════════════════════════════════════
+MAX_LEVEL = 5000
+FIGHT_COOLDOWN = 3
+BOSS_COOLDOWN = 60
+PVP_ATTACK_COOLDOWN = 1.5
+SELL_REFRESH_SECONDS = 3600
+LEADERBOARD_CONFIG_FILE = "leaderboard_config.json"
+SELL_CONFIG_FILE = "sell_config.json"
+
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+SKILLS = {
+    "trái": [{"name": "Gomu Pistol", "xp_req": 0, "damage": 15},
+             {"name": "Gomu Bazooka", "xp_req": 15, "damage": 25},
+             {"name": "Gear Second", "xp_req": 40, "damage": 45},
+             {"name": "Gear Fourth", "xp_req": 80, "damage": 75}],
+}
+
+WEAPON_EMOJI = {"trái": "🍎"}
+STAT_INFO = {
+    "defense": {"name": "Defense", "emoji": "🛡️"},
+    "fruit": {"name": "Fruit", "emoji": "🍎"},
+}
+
+RARITY_COLORS = {
+    "Starter": 0x95A5A6, "Common": 0xBDC3C7, "Uncommon": 0x2ECC71,
+    "Rare": 0x3498DB, "Legendary": 0x9B59B6, "Mythical": 0xE74C3C, "King": 0xFFD700,
+}
+TITLES = {
+    "rookie": {"name": "Tân Binh", "emoji": "🌱", "req": 10},
+    "pirate": {"name": "Hải Tặc", "emoji": "🏴‍☠️", "req": 100},
+    "supernova": {"name": "Siêu Tân Tinh", "emoji": "⭐", "req": 500},
+    "warlord": {"name": "Thất Vũ Hải", "emoji": "🦈", "req": 1000},
+    "admiral": {"name": "Đô Đốc", "emoji": "⚓", "req": 2000},
+    "emperor": {"name": "Tứ Hoàng", "emoji": "👑", "req": 3000},
+    "king_pirate": {"name": "Vua Hải Tặc", "emoji": "🏆", "req": 4000},
+    "legend": {"name": "Huyền Thoại", "emoji": "🌟", "req": 5000},
+}
+BOUNTY_RANKS = [
+    {"min": 0, "max": 10_000, "name": "Vô Danh", "emoji": "👤", "color": 0x95A5A6},
+    {"min": 10_000, "max": 100_000, "name": "Tân Binh", "emoji": "🌱", "color": 0x2ECC71},
+    {"min": 100_000, "max": 1_000_000, "name": "Hải Tặc Nhí", "emoji": "🏴‍☠️", "color": 0x3498DB},
+    {"min": 1_000_000, "max": 10_000_000, "name": "Hải Tặc Khét Tiếng", "emoji": "⚔️", "color": 0x9B59B6},
+    {"min": 10_000_000, "max": 100_000_000, "name": "Siêu Tân Tinh", "emoji": "⭐", "color": 0xE74C3C},
+    {"min": 100_000_000, "max": 500_000_000, "name": "Thất Vũ Hải", "emoji": "🦈", "color": 0xE67E22},
+    {"min": 500_000_000, "max": 1_000_000_000, "name": "Đô Đốc", "emoji": "⚓", "color": 0xF39C12},
+    {"min": 1_000_000_000, "max": 5_000_000_000, "name": "Tứ Hoàng", "emoji": "👑", "color": 0xFFD700},
+    {"min": 5_000_000_000, "max": 999_999_999_999, "name": "Vua Hải Tặc", "emoji": "🏆", "color": 0xFF6B35},
+]
+GACHA_RATES = {"Common": 50.0, "Uncommon": 25.0, "Rare": 15.0, "Legendary": 8.0, "Mythical": 1.9, "King": 0.1}
+GACHA_COST = {"single": 100000, "x10": 900000, "x50": 4000000}
+BATTLE_CONFIG = {"bounty_steal_pct": 0.20, "min_bounty": 100_000, "level_gap": 1000, "cooldown": 1800}
+SEA_DATA = {
+    1: {
+        "name": "First Sea", "emoji": "🌊", "level_range": (1, 1000),
+        "islands": {
+            "starter_island": {
+                "name": "Starter Island", "emoji": "🏝️", "level_req": 1,
+                "monsters": [
+                    {"name": "Bandit", "hp": 50, "damage": 5, "xp": 15, "coin": 20},
+                    {"name": "Trainee", "hp": 60, "damage": 6, "xp": 20, "coin": 25},
+                    {"name": "Thief", "hp": 70, "damage": 8, "xp": 25, "coin": 30},
+                ],
+                "boss": {"name": "Gorilla King", "hp": 500, "damage": 30, "xp": 5000, "coin": 10000},
+                "quest_kill": 5,
+            },
+            "jungle": {
+                "name": "Jungle", "emoji": "🌴", "level_req": 10,
+                "monsters": [
+                    {"name": "Monkey", "hp": 100, "damage": 12, "xp": 40, "coin": 60},
+                    {"name": "Gorilla", "hp": 130, "damage": 15, "xp": 55, "coin": 80},
+                    {"name": "Wild Boar", "hp": 120, "damage": 14, "xp": 50, "coin": 75},
+                ],
+                "boss": {"name": "Bobby", "hp": 1200, "damage": 60, "xp": 25000, "coin": 50000},
+                "quest_kill": 8,
+            },
+            "pirate_village": {
+                "name": "Pirate Village", "emoji": "🏴‍☠️", "level_req": 30,
+                "monsters": [
+                    {"name": "Pirate", "hp": 250, "damage": 25, "xp": 100, "coin": 180},
+                    {"name": "Brute", "hp": 320, "damage": 35, "xp": 130, "coin": 240},
+                    {"name": "Pirate Captain", "hp": 400, "damage": 45, "xp": 170, "coin": 320},
+                ],
+                "boss": {"name": "Bobby Chef", "hp": 3000, "damage": 120, "xp": 100000, "coin": 200000},
+                "quest_kill": 12,
+            },
+            "desert": {
+                "name": "Desert", "emoji": "🏜️", "level_req": 60,
+                "monsters": [
+                    {"name": "Desert Bandit", "hp": 500, "damage": 60, "xp": 220, "coin": 400},
+                    {"name": "Desert Officer", "hp": 650, "damage": 80, "xp": 280, "coin": 550},
+                    {"name": "Sand Bandit", "hp": 580, "damage": 70, "xp": 250, "coin": 470},
+                ],
+                "boss": None, "quest_kill": 15,
+            },
+            "frozen_village": {
+                "name": "Frozen Village", "emoji": "❄️", "level_req": 90,
+                "monsters": [
+                    {"name": "Snow Bandit", "hp": 800, "damage": 100, "xp": 400, "coin": 700},
+                    {"name": "Snowman", "hp": 1000, "damage": 130, "xp": 500, "coin": 900},
+                    {"name": "Ice Warrior", "hp": 1200, "damage": 150, "xp": 600, "coin": 1100},
+                ],
+                "boss": {"name": "Yeti", "hp": 10000, "damage": 350, "xp": 500000, "coin": 1000000},
+                "quest_kill": 18,
+            },
+            "marine_fortress": {
+                "name": "Marine Fortress", "emoji": "⚓", "level_req": 120,
+                "monsters": [
+                    {"name": "Marine Recruit", "hp": 1500, "damage": 180, "xp": 700, "coin": 1200},
+                    {"name": "Marine Officer", "hp": 1800, "damage": 220, "xp": 850, "coin": 1500},
+                    {"name": "Chief Petty Officer", "hp": 2200, "damage": 260, "xp": 1000, "coin": 1800},
+                ],
+                "boss": {"name": "Vice Admiral", "hp": 20000, "damage": 600, "xp": 1500000, "coin": 3000000},
+                "quest_kill": 20,
+            },
+            "skylands": {
+                "name": "Skylands", "emoji": "☁️", "level_req": 150,
+                "monsters": [
+                    {"name": "Sky Bandit", "hp": 2600, "damage": 300, "xp": 1200, "coin": 2200},
+                    {"name": "Sky Warrior", "hp": 3200, "damage": 360, "xp": 1500, "coin": 2700},
+                    {"name": "Dark Master", "hp": 4000, "damage": 420, "xp": 1800, "coin": 3300},
+                ],
+                "boss": {"name": "Fajita", "hp": 35000, "damage": 900, "xp": 3000000, "coin": 6000000},
+                "quest_kill": 22,
+            },
+            "prison": {
+                "name": "Prison", "emoji": "🔒", "level_req": 200,
+                "monsters": [
+                    {"name": "Prisoner", "hp": 5000, "damage": 500, "xp": 2200, "coin": 4000},
+                    {"name": "Dangerous Prisoner", "hp": 6500, "damage": 650, "xp": 2800, "coin": 5000},
+                    {"name": "Guard Beast", "hp": 8000, "damage": 800, "xp": 3500, "coin": 6500},
+                ],
+                "boss": {"name": "Warden", "hp": 60000, "damage": 1500, "xp": 8000000, "coin": 15000000},
+                "quest_kill": 25,
+            },
+            "colosseum": {
+                "name": "Colosseum", "emoji": "🏛️", "level_req": 250,
+                "monsters": [
+                    {"name": "Gladiator", "hp": 9000, "damage": 900, "xp": 4000, "coin": 7500},
+                    {"name": "Brute", "hp": 11000, "damage": 1100, "xp": 5000, "coin": 9000},
+                    {"name": "Arena Master", "hp": 13000, "damage": 1300, "xp": 6000, "coin": 11000},
+                ],
+                "boss": {"name": "Diamond", "hp": 100000, "damage": 2500, "xp": 15000000, "coin": 30000000},
+                "quest_kill": 28,
+            },
+            "magma_village": {
+                "name": "Magma Village", "emoji": "🌋", "level_req": 300,
+                "monsters": [
+                    {"name": "Military Soldier", "hp": 15000, "damage": 1500, "xp": 7000, "coin": 13000},
+                    {"name": "Magma Trooper", "hp": 18000, "damage": 1800, "xp": 8500, "coin": 16000},
+                    {"name": "Magma Spy", "hp": 22000, "damage": 2200, "xp": 10000, "coin": 20000},
+                ],
+                "boss": {"name": "Magma Admiral", "hp": 180000, "damage": 4000, "xp": 30000000, "coin": 50000000},
+                "quest_kill": 30,
+            },
+            "underwater_city": {
+                "name": "Underwater City", "emoji": "🌊", "level_req": 375,
+                "monsters": [
+                    {"name": "Fishman Warrior", "hp": 25000, "damage": 2500, "xp": 12000, "coin": 22000},
+                    {"name": "Fishman Officer", "hp": 30000, "damage": 3000, "xp": 15000, "coin": 28000},
+                    {"name": "Fishman Captain", "hp": 38000, "damage": 3800, "xp": 18000, "coin": 35000},
+                ],
+                "boss": {"name": "Fishman Lord", "hp": 300000, "damage": 7000, "xp": 50000000, "coin": 100000000},
+                "quest_kill": 32,
+            },
+            "fountain_city": {
+                "name": "Fountain City", "emoji": "⛲", "level_req": 450,
+                "monsters": [
+                    {"name": "Galley Pirate", "hp": 45000, "damage": 4500, "xp": 22000, "coin": 40000},
+                    {"name": "Galley Officer", "hp": 55000, "damage": 5500, "xp": 27000, "coin": 50000},
+                    {"name": "Galley Captain", "hp": 70000, "damage": 7000, "xp": 34000, "coin": 65000},
+                ],
+                "boss": {"name": "Cyborg", "hp": 500000, "damage": 12000, "xp": 100000000, "coin": 200000000},
+                "quest_kill": 35,
+            },
+            "haunted_ship": {
+                "name": "Haunted Ship", "emoji": "👻", "level_req": 600,
+                "monsters": [
+                    {"name": "Living Zombie", "hp": 80000, "damage": 8000, "xp": 40000, "coin": 75000},
+                    {"name": "Demonic Soul", "hp": 100000, "damage": 10000, "xp": 50000, "coin": 95000},
+                    {"name": "Cursed Ghost", "hp": 120000, "damage": 12000, "xp": 60000, "coin": 115000},
+                ],
+                "boss": {"name": "Cursed Captain", "hp": 800000, "damage": 20000, "xp": 200000000, "coin": 400000000},
+                "quest_kill": 38,
+            },
+            "graveyard_island": {
+                "name": "Graveyard Island", "emoji": "🪦", "level_req": 750,
+                "monsters": [
+                    {"name": "Reborn Skeleton", "hp": 150000, "damage": 15000, "xp": 70000, "coin": 130000},
+                    {"name": "Zombie Pirate", "hp": 180000, "damage": 18000, "xp": 85000, "coin": 160000},
+                    {"name": "Necromancer", "hp": 220000, "damage": 22000, "xp": 100000, "coin": 200000},
+                ],
+                "boss": {"name": "Necromancer Lord", "hp": 1500000, "damage": 35000, "xp": 400000000, "coin": 800000000},
+                "quest_kill": 40,
+            },
+        }
+    },
+    2: {
+        "name": "Second Sea", "emoji": "🌊🌊", "level_range": (1000, 2500),
+        "islands": {
+            "kingdom_of_rose": {
+                "name": "Kingdom of Rose", "emoji": "🌹", "level_req": 1000,
+                "monsters": [
+                    {"name": "Raider", "hp": 300000, "damage": 30000, "xp": 130000, "coin": 250000},
+                    {"name": "Mercenary", "hp": 380000, "damage": 38000, "xp": 160000, "coin": 300000},
+                    {"name": "Rose Knight", "hp": 450000, "damage": 45000, "xp": 190000, "coin": 360000},
+                ],
+                "boss": {"name": "Diamond (Awakened)", "hp": 2000000, "damage": 60000, "xp": 500000000, "coin": 1000000000},
+                "quest_kill": 40,
+            },
+            "green_zone": {
+                "name": "Green Zone", "emoji": "🌳", "level_req": 1100,
+                "monsters": [
+                    {"name": "Marine Soldier", "hp": 500000, "damage": 50000, "xp": 200000, "coin": 380000},
+                    {"name": "Marine Captain", "hp": 650000, "damage": 65000, "xp": 260000, "coin": 500000},
+                    {"name": "Marine Commander", "hp": 800000, "damage": 80000, "xp": 320000, "coin": 620000},
+                ],
+                "boss": {"name": "Cyborg (Awakened)", "hp": 3500000, "damage": 100000, "xp": 1000000000, "coin": 2000000000},
+                "quest_kill": 42,
+            },
+            "snow_mountain": {
+                "name": "Snow Mountain", "emoji": "🏔️", "level_req": 1300,
+                "monsters": [
+                    {"name": "Snow Trooper", "hp": 900000, "damage": 90000, "xp": 350000, "coin": 650000},
+                    {"name": "Snow Assassin", "hp": 1100000, "damage": 110000, "xp": 420000, "coin": 800000},
+                    {"name": "Ice Giant", "hp": 1400000, "damage": 140000, "xp": 500000, "coin": 950000},
+                ],
+                "boss": {"name": "Snow Demon", "hp": 5000000, "damage": 150000, "xp": 1500000000, "coin": 3000000000},
+                "quest_kill": 45,
+            },
+            "hot_and_cold": {
+                "name": "Hot and Cold", "emoji": "🌡️", "level_req": 1500,
+                "monsters": [
+                    {"name": "Fire Trooper", "hp": 1500000, "damage": 150000, "xp": 580000, "coin": 1100000},
+                    {"name": "Ice Trooper", "hp": 1800000, "damage": 180000, "xp": 680000, "coin": 1300000},
+                    {"name": "Magma Soldier", "hp": 2200000, "damage": 220000, "xp": 800000, "coin": 1500000},
+                ],
+                "boss": {"name": "Fire and Ice Admiral", "hp": 8000000, "damage": 250000, "xp": 2000000000, "coin": 4000000000},
+                "quest_kill": 48,
+            },
+            "cursed_ship": {
+                "name": "Cursed Ship", "emoji": "🏴‍☠️", "level_req": 1700,
+                "monsters": [
+                    {"name": "Cursed Pirate", "hp": 2500000, "damage": 250000, "xp": 950000, "coin": 1800000},
+                    {"name": "Soul Reaper", "hp": 3000000, "damage": 300000, "xp": 1100000, "coin": 2100000},
+                    {"name": "Cursed Warrior", "hp": 3500000, "damage": 350000, "xp": 1300000, "coin": 2500000},
+                ],
+                "boss": {"name": "Cursed Captain", "hp": 12000000, "damage": 400000, "xp": 3000000000, "coin": 6000000000},
+                "quest_kill": 50,
+            },
+            "ice_castle": {
+                "name": "Ice Castle", "emoji": "🏰", "level_req": 1900,
+                "monsters": [
+                    {"name": "Arctic Warrior", "hp": 4000000, "damage": 400000, "xp": 1500000, "coin": 2800000},
+                    {"name": "Frozen Knight", "hp": 4800000, "damage": 480000, "xp": 1800000, "coin": 3300000},
+                    {"name": "Ice Queen Guard", "hp": 5500000, "damage": 550000, "xp": 2100000, "coin": 3800000},
+                ],
+                "boss": {"name": "Ice Queen", "hp": 18000000, "damage": 600000, "xp": 5000000000, "coin": 10000000000},
+                "quest_kill": 52,
+            },
+        }
+    },
+    3: {
+        "name": "Third Sea", "emoji": "🌊🌊🌊", "level_range": (2500, 5000),
+        "islands": {
+            "port_town": {
+                "name": "Port Town", "emoji": "🏘️", "level_req": 2500,
+                "monsters": [
+                    {"name": "Pirate Thug", "hp": 20000000, "damage": 2000000, "xp": 7000000, "coin": 13000000},
+                    {"name": "Marine Guard", "hp": 24000000, "damage": 2400000, "xp": 8200000, "coin": 15000000},
+                    {"name": "Town Bandit", "hp": 28000000, "damage": 2800000, "xp": 9500000, "coin": 17000000},
+                ],
+                "boss": None, "quest_kill": 50,
+            },
+            "hydra_island": {
+                "name": "Hydra Island", "emoji": "🐉", "level_req": 2700,
+                "monsters": [
+                    {"name": "Hydra Warrior", "hp": 35000000, "damage": 3500000, "xp": 12000000, "coin": 22000000},
+                    {"name": "Beast Hunter", "hp": 42000000, "damage": 4200000, "xp": 14500000, "coin": 26000000},
+                    {"name": "Hydra Guardian", "hp": 50000000, "damage": 5000000, "xp": 17000000, "coin": 30000000},
+                ],
+                "boss": {"name": "Stone", "hp": 80000000, "damage": 3000000, "xp": 25000000000, "coin": 50000000000},
+                "quest_kill": 52,
+            },
+            "great_tree": {
+                "name": "Great Tree", "emoji": "🌳", "level_req": 2900,
+                "monsters": [
+                    {"name": "Forest Guardian", "hp": 60000000, "damage": 6000000, "xp": 20000000, "coin": 36000000},
+                    {"name": "Tree Beast", "hp": 72000000, "damage": 7200000, "xp": 24000000, "coin": 43000000},
+                    {"name": "Ancient Druid", "hp": 85000000, "damage": 8500000, "xp": 28000000, "coin": 50000000},
+                ],
+                "boss": {"name": "Island Empress", "hp": 120000000, "damage": 5000000, "xp": 40000000000, "coin": 80000000000},
+                "quest_kill": 55,
+            },
+            "castle_turtle": {
+                "name": "Castle on Turtle", "emoji": "🐢", "level_req": 3100,
+                "monsters": [
+                    {"name": "Turtle Warrior", "hp": 100000000, "damage": 10000000, "xp": 34000000, "coin": 62000000},
+                    {"name": "Samurai Guard", "hp": 120000000, "damage": 12000000, "xp": 40000000, "coin": 72000000},
+                    {"name": "Shogun Soldier", "hp": 150000000, "damage": 15000000, "xp": 48000000, "coin": 86000000},
+                ],
+                "boss": {"name": "Cake Queen", "hp": 200000000, "damage": 8000000, "xp": 70000000000, "coin": 140000000000},
+                "quest_kill": 58,
+            },
+            "haunted_castle": {
+                "name": "Haunted Castle", "emoji": "🏚️", "level_req": 3400,
+                "monsters": [
+                    {"name": "Reaper", "hp": 180000000, "damage": 18000000, "xp": 58000000, "coin": 105000000},
+                    {"name": "Soul Reaper", "hp": 220000000, "damage": 22000000, "xp": 68000000, "coin": 125000000},
+                    {"name": "Death Knight", "hp": 270000000, "damage": 27000000, "xp": 80000000, "coin": 145000000},
+                ],
+                "boss": {"name": "Soul Reaper (Awakened)", "hp": 350000000, "damage": 12000000, "xp": 120000000000, "coin": 240000000000},
+                "quest_kill": 60,
+            },
+        }
+    },
+}
+
+SHOP_DATA = {
+    "fruits": {
+        "rocket": {"name": "Rocket", "price": 5000, "rarity": "Common", "sea": 1, "emoji": "<:Rocket:1552121520686375043>"},
+        "spin": {"name": "Spin", "price": 7500, "rarity": "Common", "sea": 1, "emoji": "<:Spin:1552122260259602514>"},
+        "chop": {"name": "blade", "price": 30000, "rarity": "Common", "sea": 1, "emoji": "<:Blade:1552122411707797644>"},
+        "spring": {"name": "Spring", "price": 60000, "rarity": "Common", "sea": 1, "emoji": "<:Spring:1552122676946935808>"},
+        "boom": {"name": "Boom", "price": 80000, "rarity": "Common", "sea": 1, "emoji": "<:Bomb:1552123191248556132>"},
+        "smoke": {"name": "Smoke", "price": 100000, "rarity": "Common", "sea": 1, "emoji": "<:Smoke:1552124023989739692>"},
+        "spike": {"name": "Spike", "price": 180000, "rarity": "Common", "sea": 1, "emoji": "<:Spike:1552124396607635538>"},
+        "flame": {"name": "Flame", "price": 250000, "rarity": "Uncommon", "sea": 1, "emoji": "<:Flame:1552125668362420334>"},
+        "ice": {"name": "Ice", "price": 350000, "rarity": "Uncommon", "sea": 1, "emoji": "<:Ice:1552126283268362371>"},
+        "sand": {"name": "Sand", "price": 420000, "rarity": "Uncommon", "sea": 1, "emoji": "<:Sand:1552126592061542410>"},
+        "dark": {"name": "Dark", "price": 500000, "rarity": "Uncommon", "sea": 1, "emoji": "<:Dark:1552126916838957096>"},
+        "eagle": {"name": "Eagle", "price": 550000, "rarity": "Uncommon", "sea": 1, "emoji": "<:Eagle:1552127851434745926>"},
+        "diamond": {"name": "Diamond", "price": 600000, "rarity": "Rare", "sea": 1, "emoji": "<:Diamond:1552128142976483389>"},
+        "light": {"name": "Light", "price": 650000, "rarity": "Rare", "sea": 1, "emoji": "<:Light:1552128433595883581>"},
+        "rubber": {"name": "Rubber", "price": 750000, "rarity": "Rare", "sea": 1, "emoji": "<:Rubber:1552128724059553892>"},
+        "ghost": {"name": "Ghost", "price": 940000, "rarity": "Rare", "sea": 1, "emoji": "<:Ghost:1552128805571797013>"},
+        "magma": {"name": "Magma", "price": 960000, "rarity": "Rare", "sea": 1, "emoji": "<:Magma:1552129422478417971>"},
+        "quake": {"name": "Quake", "price": 1000000, "rarity": "Rare", "sea": 1, "emoji": "<:Quake:1552129917863596174>"},
+        "buddha": {"name": "Buddha", "price": 1200000, "rarity": "Rare", "sea": 1, "emoji": "<:Buddha:1552130097111109722>"},
+        "love": {"name": "Love", "price": 1300000, "rarity": "Rare", "sea": 1, "emoji": "<:Love:1552130396937003048>"},
+        "creation": {"name": "Creation", "price": 1400000, "rarity": "Rare", "sea": 1, "emoji": "<:Creation:1552130835237568604>"},
+        "spider": {"name": "Spider", "price": 1500000, "rarity": "Rare", "sea": 1, "emoji": "<:Spider:1552131088153845810>"},
+        "sound": {"name": "Sound", "price": 1700000, "rarity": "Rare", "sea": 1, "emoji": "<:Sound:1552131217489657976>"},
+        "phoenix": {"name": "Phoenix", "price": 1800000, "rarity": "Rare", "sea": 1, "emoji": "<:Phoenix:1552131345814130771>"},
+        "portal": {"name": "Portal", "price": 1900000, "rarity": "Rare", "sea": 1, "emoji": "<:Portal:1552131476676681849>"},
+        "lingtning": {"name": "Lightning", "price": 2100000, "rarity": "Legendary", "sea": 1, "emoji": "<:Lightning:1552132636691144724>"},
+        "pain": {"name": "Pain", "price": 2300000, "rarity": "Legendary", "sea": 1, "emoji": "<:Pain:1552132667875663972>"},
+        "blizzard": {"name": "Blizzard", "price": 2400000, "rarity": "Legendary", "sea": 1, "emoji": "<:Blizzard:1552132766072836137>"},
+        "gravity": {"name": "Gravity", "price": 2500000, "rarity": "Mythical", "sea": 1, "emoji": "<:Gravity:1552134040763502692>"},
+        "mammoth": {"name": "Mammoth", "price": 2700000, "rarity": "Mythical", "sea": 1, "emoji": "<:Mammoth:1552134659624931388>"},
+        "t-rex": {"name": "T-Rex", "price": 2700000, "rarity": "Mythical", "sea": 1, "emoji": "<:TRex:1552135002928713798>"},
+        "dough": {"name": "Dough", "price": 2800000, "rarity": "Mythical", "sea": 1, "emoji": "<:Dough:1552135199008231515>"},
+        "shadow": {"name": "Shadow", "price": 2900000, "rarity": "Mythical", "sea": 1, "emoji": "<:Shadow:1552135431204900967>"},
+        "venom": {"name": "Venom", "price": 3000000, "rarity": "Mythical", "sea": 1, "emoji": "<:Venom:1552135525035671562>"},
+        "gas": {"name": "Gas", "price": 3200000, "rarity": "Mythical", "sea": 1, "emoji": "<:Gas:1552136163085525012>"},
+        "spirit": {"name": "Spirit", "price": 3400000, "rarity": "Mythical", "sea": 1, "emoji": "<:Spirit:1552136390228181042>"},
+        "tiger": {"name": "Tiger", "price": 5000000, "rarity": "Mythical", "sea": 1, "emoji": "<:Tiger:1552136589696704644>"},
+        "yeti": {"name": "Yeti", "price": 5000000, "rarity": "Mythical", "sea": 1, "emoji": "<:Yeti:1552136931268366356>"},
+        "magnet": {"name": "Magnet", "price": 6000000, "rarity": "Mythical", "sea": 1, "emoji": "<:Magnet:1552137076408057886>"},
+        "kitsune": {"name": "Kitsune", "price": 8000000, "rarity": "Mythical", "sea": 1, "emoji": "<:Kitsune:1552137395095339088>"},
+        "control": {"name": "Control", "price": 9000000, "rarity": "Mythical", "sea": 1, "emoji": "<:Control:1552138369482362952>"},
+        "dragon_east": {"name": "Dragon East", "price": 15000000, "rarity": "LMythical", "sea": 1, "emoji": "<:Dragon_East:1552138428940816444>"},
+        "dragon_west": {"name": "Dragon West", "price": 15000000, "rarity": "LMythical", "sea": 1, "emoji": "<:Dragon_West:1552138668263604244>"},
+
+        
+    },
+
+}
+AWAKENING_SKILLS = {
+    "flame": {
+        "color": 0xE67E22,
+        "skills": {
+            "Z": {"fragment": 250, "damage_mult": 1.5, "awakened_name": "Flame Bullet+", "emoji": "🔥"},
+            "X": {"fragment": 400, "damage_mult": 1.5, "awakened_name": "Fire Fist+", "emoji": "👊"},
+            "C": {"fragment": 500, "damage_mult": 1.6, "awakened_name": "Flame Flight+", "emoji": "🦅"},
+            "V": {"fragment": 800, "damage_mult": 1.8, "awakened_name": "Flame Emperor", "emoji": "👑"},
+        },
+        "full_bonus": {"name": "Flame Awakening", "desc": "Mở khoá sức mạnh tối thượng", "damage_mult": 1.3},
+    },
+    "ice": {
+        "color": 0x3498DB,
+        "skills": {
+            "Z": {"fragment": 250, "damage_mult": 1.5, "awakened_name": "Ice Spear+", "emoji": "🗡️"},
+            "X": {"fragment": 400, "damage_mult": 1.5, "awakened_name": "Ice Ball+", "emoji": "⚪"},
+            "C": {"fragment": 500, "damage_mult": 1.6, "awakened_name": "Ice Age+", "emoji": "❄️"},
+            "V": {"fragment": 800, "damage_mult": 1.8, "awakened_name": "Ice Time", "emoji": "⏱️"},
+        },
+        "full_bonus": {"name": "Ice Awakening", "desc": "Đóng băng toàn bộ", "damage_mult": 1.3},
+    },
+    "dark": {
+        "color": 0x2C3E50,
+        "skills": {
+            "Z": {"fragment": 350, "damage_mult": 1.5, "awakened_name": "Dark Hole+", "emoji": "🕳️"},
+            "X": {"fragment": 500, "damage_mult": 1.5, "awakened_name": "Black Hole+", "emoji": "⚫"},
+            "C": {"fragment": 650, "damage_mult": 1.6, "awakened_name": "Dark Prison+", "emoji": "🔒"},
+            "V": {"fragment": 900, "damage_mult": 1.8, "awakened_name": "Dark Dimension", "emoji": "🌑"},
+        },
+        "full_bonus": {"name": "Dark Awakening", "desc": "Kéo vào hư không", "damage_mult": 1.35},
+    },
+    "rubber": {
+        "color": 0xE74C3C,
+        "skills": {
+            "Z": {"fragment": 400, "damage_mult": 1.5, "awakened_name": "Gomu Bazooka+", "emoji": "💥"},
+            "X": {"fragment": 600, "damage_mult": 1.5, "awakened_name": "Gomu Rocket+", "emoji": "🚀"},
+            "C": {"fragment": 800, "damage_mult": 1.6, "awakened_name": "Gear Second+", "emoji": "💨"},
+            "V": {"fragment": 1200, "damage_mult": 2.0, "awakened_name": "Gear Fifth", "emoji": "🎈"},
+        },
+        "full_bonus": {"name": "Nika Awakening", "desc": "Sức mạnh Nika — biến mọi thứ thành cao su", "damage_mult": 1.4},
+    },
+    "magma": {
+        "color": 0xE74C3C,
+        "skills": {
+            "Z": {"fragment": 500, "damage_mult": 1.5, "awakened_name": "Magma Bullet+", "emoji": "🔴"},
+            "X": {"fragment": 700, "damage_mult": 1.5, "awakened_name": "Magma Rain+", "emoji": "🌧️"},
+            "C": {"fragment": 900, "damage_mult": 1.6, "awakened_name": "Magma Fist+", "emoji": "👊"},
+            "V": {"fragment": 1500, "damage_mult": 2.0, "awakened_name": "Meteor Volcano", "emoji": "☄️"},
+        },
+        "full_bonus": {"name": "Magma Awakening", "desc": "Mưa thiên thạch dung nham", "damage_mult": 1.5},
+    },
+    "quake": {
+        "color": 0x7F8C8D,
+        "skills": {
+            "Z": {"fragment": 500, "damage_mult": 1.5, "awakened_name": "Shockwave+", "emoji": "🌊"},
+            "X": {"fragment": 700, "damage_mult": 1.5, "awakened_name": "Quake Bubble+", "emoji": "🫧"},
+            "C": {"fragment": 1000, "damage_mult": 1.6, "awakened_name": "Rupture+", "emoji": "💔"},
+            "V": {"fragment": 1500, "damage_mult": 2.0, "awakened_name": "World Breaker", "emoji": "🌍"},
+        },
+        "full_bonus": {"name": "Quake Awakening", "desc": "Rạn nứt không gian", "damage_mult": 1.5},
+    },
+    "rumble": {
+        "color": 0xF1C40F,
+        "skills": {
+            "Z": {"fragment": 700, "damage_mult": 1.5, "awakened_name": "Lightning Spear+", "emoji": "⚡"},
+            "X": {"fragment": 900, "damage_mult": 1.5, "awakened_name": "Thunder Storm+", "emoji": "⛈️"},
+            "C": {"fragment": 1200, "damage_mult": 1.6, "awakened_name": "Thunder Bird+", "emoji": "🐦"},
+            "V": {"fragment": 1800, "damage_mult": 2.0, "awakened_name": "Thunder God", "emoji": "🌩️"},
+        },
+        "full_bonus": {"name": "Rumble Awakening", "desc": "Hoá thân thần sấm", "damage_mult": 1.6},
+    },
+    "buddha": {
+        "color": 0xF39C12,
+        "skills": {
+            "Z": {"fragment": 700, "damage_mult": 1.5, "awakened_name": "Buddha Fist+", "emoji": "👊"},
+            "X": {"fragment": 1000, "damage_mult": 1.5, "awakened_name": "Shockwave Palm+", "emoji": "✋"},
+            "C": {"fragment": 1300, "damage_mult": 1.6, "awakened_name": "Golden Buddha+", "emoji": "🥇"},
+            "V": {"fragment": 2000, "damage_mult": 2.0, "awakened_name": "Thousand Hands", "emoji": "🙏"},
+        },
+        "full_bonus": {"name": "Buddha Awakening", "desc": "Miễn nhiễm vật lý", "damage_mult": 1.6},
+    },
+    "venom": {
+        "color": 0x27AE60,
+        "skills": {
+            "Z": {"fragment": 800, "damage_mult": 1.5, "awakened_name": "Venom Shot+", "emoji": "💚"},
+            "X": {"fragment": 1100, "damage_mult": 1.5, "awakened_name": "Venom Fang+", "emoji": "🐍"},
+            "C": {"fragment": 1400, "damage_mult": 1.6, "awakened_name": "Venom Web+", "emoji": "🕸️"},
+            "V": {"fragment": 2200, "damage_mult": 2.0, "awakened_name": "Venom Demon", "emoji": "😈"},
+        },
+        "full_bonus": {"name": "Venom Awakening", "desc": "Hoá thân quỷ độc", "damage_mult": 1.65},
+    },
+    "dough": {
+        "color": 0xE91E63,
+        "skills": {
+            "Z": {"fragment": 900, "damage_mult": 1.5, "awakened_name": "Dough Roll+", "emoji": "🥐"},
+            "X": {"fragment": 1200, "damage_mult": 1.5, "awakened_name": "Dough Shot+", "emoji": "🎯"},
+            "C": {"fragment": 1500, "damage_mult": 1.6, "awakened_name": "Baked Jail+", "emoji": "🍞"},
+            "V": {"fragment": 2400, "damage_mult": 2.0, "awakened_name": "Dough Awakening", "emoji": "🍩"},
+        },
+        "full_bonus": {"name": "Dough Awakening", "desc": "Hồi máu liên tục", "damage_mult": 1.75},
+    },
+    "dragon": {
+        "color": 0x27AE60,
+        "skills": {
+            "Z": {"fragment": 1000, "damage_mult": 1.5, "awakened_name": "Dragon Breath+", "emoji": "🔥"},
+            "X": {"fragment": 1300, "damage_mult": 1.5, "awakened_name": "Dragon Cannon+", "emoji": "💥"},
+            "C": {"fragment": 1700, "damage_mult": 1.6, "awakened_name": "Dragon Rush+", "emoji": "🐲"},
+            "V": {"fragment": 2600, "damage_mult": 2.0, "awakened_name": "Dragon Transform", "emoji": "🐉"},
+        },
+        "full_bonus": {"name": "Dragon Awakening", "desc": "Hoá rồng khổng lồ", "damage_mult": 1.8},
+    },
+    "kitsune": {
+        "color": 0xFF6B35,
+        "skills": {
+            "Z": {"fragment": 1500, "damage_mult": 1.5, "awakened_name": "Fire Fox+", "emoji": "🔥"},
+            "X": {"fragment": 2000, "damage_mult": 1.5, "awakened_name": "Fox Illusion+", "emoji": "🌀"},
+            "C": {"fragment": 2500, "damage_mult": 1.6, "awakened_name": "Nine Tails+", "emoji": "🦊"},
+            "V": {"fragment": 3500, "damage_mult": 2.2, "awakened_name": "Kitsune Mode", "emoji": "🌟"},
+        },
+        "full_bonus": {"name": "Kitsune Awakening", "desc": "Cáo chín đuôi", "damage_mult": 2.0},
+    },
+    "leopard": {
+        "color": 0xF39C12,
+        "skills": {
+            "Z": {"fragment": 1200, "damage_mult": 1.5, "awakened_name": "Leopard Dash+", "emoji": "💨"},
+            "X": {"fragment": 1600, "damage_mult": 1.5, "awakened_name": "Fang Strike+", "emoji": "🦷"},
+            "C": {"fragment": 2000, "damage_mult": 1.6, "awakened_name": "Roar+", "emoji": "📢"},
+            "V": {"fragment": 3000, "damage_mult": 2.2, "awakened_name": "Leopard Awakening", "emoji": "🐆"},
+        },
+        "full_bonus": {"name": "Leopard Awakening", "desc": "Tốc độ ánh sáng", "damage_mult": 1.9},
+    },
+    "gas": {
+        "color": 0x27AE60,
+        "skills": {
+            "Z": {"fragment": 1700, "damage_mult": 1.5, "awakened_name": "Gas Cloud+", "emoji": "☁️"},
+            "X": {"fragment": 2200, "damage_mult": 1.5, "awakened_name": "Toxic Shot+", "emoji": "🧪"},
+            "C": {"fragment": 2800, "damage_mult": 1.6, "awakened_name": "Gas Prison+", "emoji": "🔒"},
+            "V": {"fragment": 4000, "damage_mult": 2.2, "awakened_name": "Gas Apocalypse", "emoji": "💨"},
+        },
+        "full_bonus": {"name": "Gas Awakening", "desc": "Khí độc hủy diệt", "damage_mult": 2.05},
+    },
+    "dough_king": {
+        "color": 0xFFD700,
+        "skills": {
+            "Z": {"fragment": 1800, "damage_mult": 1.6, "awakened_name": "King Roll", "emoji": "🥐"},
+            "X": {"fragment": 2300, "damage_mult": 1.6, "awakened_name": "King Shot", "emoji": "👑"},
+            "C": {"fragment": 2900, "damage_mult": 1.7, "awakened_name": "King Jail", "emoji": "⛓️"},
+            "V": {"fragment": 4500, "damage_mult": 2.5, "awakened_name": "King's Awakening", "emoji": "🌟"},
+        },
+        "full_bonus": {"name": "King Awakening", "desc": "Bất khả chiến bại", "damage_mult": 2.2},
+    },
+}
+
+RAID_BOSSES = {
+    "raid_bandit": {"name": "Bandit King", "emoji": "🏴‍☠️", "tier": 1, "hp": 3000, "damage": 50, "level_req": 50, "cooldown": 300, "reward_fragment": (20, 40), "reward_coin": (100000, 200000), "reward_xp": (50000, 100000), "color": 0x95A5A6},
+    "raid_yeti": {"name": "Yeti", "emoji": "❄️", "tier": 1, "hp": 5000, "damage": 80, "level_req": 100, "cooldown": 300, "reward_fragment": (35, 60), "reward_coin": (200000, 350000), "reward_xp": (100000, 200000), "color": 0x3498DB},
+    "raid_dragon": {"name": "Raid Dragon", "emoji": "🐉", "tier": 2, "hp": 15000, "damage": 200, "level_req": 300, "cooldown": 600, "reward_fragment": (80, 150), "reward_coin": (500000, 800000), "reward_xp": (500000, 1000000), "color": 0x27AE60},
+    "raid_cyborg": {"name": "Raid Cyborg", "emoji": "🦾", "tier": 2, "hp": 20000, "damage": 250, "level_req": 400, "cooldown": 600, "reward_fragment": (100, 200), "reward_coin": (800000, 1200000), "reward_xp": (800000, 1500000), "color": 0x7F8C8D},
+    "raid_dough_king": {"name": "Raid Dough King", "emoji": "👑", "tier": 3, "hp": 50000, "damage": 500, "level_req": 700, "cooldown": 900, "reward_fragment": (200, 400), "reward_coin": (2000000, 3000000), "reward_xp": (3000000, 5000000), "color": 0xE91E63},
+    "raid_shadow": {"name": "Raid Shadow", "emoji": "🌑", "tier": 3, "hp": 70000, "damage": 700, "level_req": 900, "cooldown": 900, "reward_fragment": (300, 550), "reward_coin": (3000000, 5000000), "reward_xp": (5000000, 8000000), "color": 0x2C3E50},
+    "raid_kitsune": {"name": "Raid Kitsune", "emoji": "🦊", "tier": 4, "hp": 150000, "damage": 1200, "level_req": 1200, "cooldown": 1200, "reward_fragment": (500, 900), "reward_coin": (8000000, 12000000), "reward_xp": (15000000, 25000000), "color": 0xFF6B35},
+    "raid_god": {"name": "Raid God", "emoji": "🌟", "tier": 5, "hp": 500000, "damage": 3000, "level_req": 2000, "cooldown": 1800, "reward_fragment": (1500, 3000), "reward_coin": (50000000, 80000000), "reward_xp": (100000000, 200000000), "color": 0xFFD700},
+}
+
+RACES = {
+    "human": {"name": "Human", "emoji": "🧑", "color": 0x95A5A6, "v1": {"name": "Human V1", "bonus": {"melee": 10, "defense": 10}}},
+    "cyborg": {"name": "Cyborg", "emoji": "🦾", "color": 0x7F8C8D, "v1": {"name": "Cyborg V1", "bonus": {"gun": 15, "defense": 10}}},
+    "skypiea": {"name": "Skypiea", "emoji": "☁️", "color": 0x3498DB, "v1": {"name": "Skypiea V1", "bonus": {"fruit": 15, "melee": 5}}},
+    "fishman": {"name": "Fishman", "emoji": "🐟", "color": 0x1ABC9C, "v1": {"name": "Fishman V1", "bonus": {"melee": 20, "defense": 15}}},
+    "ghoul": {"name": "Ghoul", "emoji": "💀", "color": 0x2C3E50, "v1": {"name": "Ghoul V1", "bonus": {"sword": 20, "melee": 10}}},
+    "mink": {"name": "Mink", "emoji": "🐾", "color": 0xF39C12, "v1": {"name": "Mink V1", "bonus": {"sword": 15, "gun": 15}}},
+}
+RACE_V4_COST = {"coin": 10_000_000, "fragments": 5_000, "race_fragments": 500}
+
+def get_race_v4_bonus(race_key):
+    race = RACES.get(race_key)
+    if not race:
+        return {}
+    return {k: v * 5 for k, v in race["v1"]["bonus"].items()}
+
+# ══════════════════════════════════════════════════════════════════
+# 🎯 AWAKENING HELPERS
+# ══════════════════════════════════════════════════════════════════
+def is_skill_awakened(player, fruit_key, skill_key):
+    awakened = player.get("awakened_skills", {})
+    return skill_key in awakened.get(fruit_key, [])
+
+def is_fruit_fully_awakened(player, fruit_key):
+    awakened = player.get("awakened_skills", {}).get(fruit_key, [])
+    return all(s in awakened for s in ["Z", "X", "C", "V"])
+
+def get_skill_damage_mult(player, fruit_key, skill_key):
+    info = AWAKENING_SKILLS.get(fruit_key)
+    if not info:
+        return 1.0
+    sk = info["skills"].get(skill_key)
+    if not sk:
+        return 1.0
+    if is_skill_awakened(player, fruit_key, skill_key):
+        return sk["damage_mult"]
+    return 1.0
+
+def get_fruit_damage_multiplier(player, fruit_key):
+    if not fruit_key:
+        return 1.0
+    info = AWAKENING_SKILLS.get(fruit_key)
+    if not info:
+        return 1.0
+    awakened = player.get("awakened_skills", {}).get(fruit_key, [])
+    if not awakened:
+        return 1.0
+    if is_fruit_fully_awakened(player, fruit_key):
+        return info["full_bonus"]["damage_mult"]
+    return 1.0 + 0.1 * len(awakened)
+# ══════════════════════════════════════════════════════════════════
+# 💾 STORAGE
+# ══════════════════════════════════════════════════════════════════
+player_data = {}
+
+def normalize_player_loadout(player):
+    old_inv = player.get("inventory", {}) or {}
+    player["inventory"] = {"fruits": list(old_inv.get("fruits", []))}
+    for key in ("equipped_sword", "equipped_gun", "equipped_melee", "equipped_accessory"): player.pop(key, None)
+    base=player.get("base_stats",{}) or {}; stats=player.get("stats",{}) or {}
+    player["base_stats"]={"defense":base.get("defense",1),"fruit":base.get("fruit",1)}
+    player["stats"]={"defense":stats.get("defense",1),"fruit":stats.get("fruit",1)}
+    mastery=player.get("mastery",{}) or {}; player["mastery"]={"trái":mastery.get("trái",0)}
+    recalc_stats(player); return player
+
+active_battles = {}
+user_in_battle = {}
+active_raids = {}
+battle_cooldowns = {}
+
+def load_leaderboard_config():
+    if os.path.exists(LEADERBOARD_CONFIG_FILE):
+        try:
+            with open(LEADERBOARD_CONFIG_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_leaderboard_config():
+    with open(LEADERBOARD_CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(leaderboard_config, f, indent=2, ensure_ascii=False)
+
+def load_sell_config():
+    if os.path.exists(SELL_CONFIG_FILE):
+        try:
+            with open(SELL_CONFIG_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_sell_config():
+    with open(SELL_CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(sell_config, f, indent=2, ensure_ascii=False)
+
+leaderboard_config = load_leaderboard_config()
+sell_config = load_sell_config()
+
+# ══════════════════════════════════════════════════════════════════
+# 🧮 HELPERS
+# ══════════════════════════════════════════════════════════════════
+def format_number(n):
+    if n >= 1_000_000_000_000: return f"{n / 1_000_000_000_000:.1f}T"
+    if n >= 1_000_000_000: return f"{n / 1_000_000_000:.1f}B"
+    if n >= 1_000_000: return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000: return f"{n / 1_000:.1f}K"
+    return str(n)
+
+def format_bounty(b):
+    return f"{format_number(b)} Berries"
+
+def format_time(seconds):
+    m, s = divmod(int(seconds), 60)
+    return f"{m}p{s}s" if m else f"{s}s"
+
+def xp_to_level(level):
+    if level <= 1: return 0
+    return int(50 * (level ** 2) * (level / 100 + 1))
+
+def calc_level(xp):
+    if xp < 0: return 1
+    lo, hi = 1, MAX_LEVEL
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if xp_to_level(mid) <= xp: lo = mid
+        else: hi = mid - 1
+    return lo
+
+def xp_progress_in_level(xp):
+    level = calc_level(xp)
+    cur = xp_to_level(level)
+    nxt = xp_to_level(level + 1)
+    return xp - cur, nxt - cur
+
+def calc_max_hp(player):
+    return 100 + player["stats"]["defense"] * 20
+
+def get_stat_damage(player, weapon):
+    if weapon == "trái": return player["stats"]["fruit"] * 2
+    return 0
+
+def get_title_by_level(level):
+    for t in reversed(list(TITLES.values())):
+        if level >= t["req"]: return f"{t['emoji']} {t['name']}"
+    return "🌱 Người Mới"
+
+def get_player_title(player):
+    level = player["level"]
+    if player.get("pvp_wins", 0) >= 100: return "pvp_king"
+    if player.get("raids_cleared", 0) >= 50: return "raid_master"
+    for key in ["legend", "king_pirate", "emperor", "admiral", "warlord",
+                "supernova", "pirate", "rookie"]:
+        if level >= TITLES[key]["req"]: return key
+    return None
+
+def get_title_display(player):
+    t = get_player_title(player)
+    if not t: return ""
+    info = TITLES[t]
+    return f"{info['emoji']} **{info['name']}**"
+
+def get_bounty_rank(bounty):
+    for r in BOUNTY_RANKS:
+        if r["min"] <= bounty < r["max"]: return r
+    return BOUNTY_RANKS[-1]
+
+def recalc_stats(player):
+    player["stats"] = dict(player["base_stats"])
+    race_key = player.get("race", "human")
+    race_level = player.get("race_level", 1)
+    race = RACES.get(race_key)
+    if race:
+        bonuses = get_race_v4_bonus(race_key) if race_level >= 4 else race["v1"]["bonus"]
+        for stat, val in bonuses.items():
+            if stat in player["stats"]: player["stats"][stat] += val
+    player["current_hp"] = calc_max_hp(player)
+
+def update_stat_points(player):
+    cur = min(player["level"], MAX_LEVEL)
+    last = player.get("last_level", 1)
+    if cur > last:
+        gained = (cur - last) * 3
+        player["stat_points"] += gained
+        player["last_level"] = cur
+        player["level"] = cur
+        return gained
+    return 0
+
+def create_player(faction):
+    return {
+        "faction": faction, "xp": 0, "coin": 0, "level": 1,
+        "base_stats": {"defense": 1, "fruit": 1},
+        "stats": {"defense": 1, "fruit": 1},
+        "stat_points": 0, "last_level": 1, "current_hp": 120,
+        "equipped_fruit": None,
+        "fragments": 0, "awakened_skills": {},
+        "bounty": 0, "bounty_history": [],
+        "pvp_wins": 0, "pvp_losses": 0, "battle_wins": 0, "battle_losses": 0,
+        "bounty_stolen": 0, "bounty_lost": 0,
+        "boss_cooldowns": {}, "bosses_killed": 0, "raid_cooldowns": {}, "raids_cleared": 0,
+        "total_kills": 0, "title": None, "bio": "", "created_at": time.time(), "playtime": 0,
+        "race": "human", "race_level": 1, "race_fragments": 0,
+        "current_sea": 1, "current_island": None, "quest_progress": 0, "quest_weapon": None,
+        "last_fight": 0, "unlocked_seas": [1], "mastery": {"trái": 0},
+        "inventory": {"fruits": []},
+    }
+
+def calc_power_score(player):
+    s = player["stats"]
+    stat_score = s["defense"]*2 + s["fruit"]*3
+    level_score = player["level"] * 10
+    awaken_score = sum(len(v) for v in player.get("awakened_skills", {}).values()) * 200
+    inv_score = sum(len(v) for v in player.get("inventory", {}).values()) * 20
+    pvp_score = player.get("pvp_wins", 0) * 50
+    frag_score = player.get("fragments", 0) * 0.1
+    return int(stat_score + level_score + awaken_score + inv_score + pvp_score + frag_score)
+
+def get_top_players(limit=10):
+    ranked = [(uid, p, calc_power_score(p)) for uid, p in player_data.items()]
+    ranked.sort(key=lambda x: x[2], reverse=True)
+    return ranked[:limit]
+
+def add_bounty(player, amount, reason="", cap=10_000_000_000):
+    old = player.get("bounty", 0)
+    new = min(max(0, old + amount), cap)
+    actual = new - old
+    player["bounty"] = new
+    if "bounty_history" not in player: player["bounty_history"] = []
+    player["bounty_history"].append({"amount": actual, "reason": reason, "time": time.time()})
+    player["bounty_history"] = player["bounty_history"][-20:]
+    return actual
+
+# ══════════════════════════════════════════════════════════════════
+# ⚔️ COMBAT
+# ══════════════════════════════════════════════════════════════════
+def simulate_fight(player, sea, island_key, weapon, skill_index=0):
+    island = SEA_DATA[sea]["islands"][island_key]
+    skill = SKILLS[weapon][skill_index]
+    monster = random.choice(island["monsters"])
+
+    stat_dmg = get_stat_damage(player, weapon)
+    mastery_bonus = player["mastery"].get(weapon, 0) * 0.3
+    player_dmg = skill["damage"] + stat_dmg + mastery_bonus + player["level"] * 2 + random.randint(-5, 10)
+
+    if weapon == "trái":
+        equipped = player.get("equipped_fruit")
+        if equipped:
+            skill_keys = ["M1", "Z", "X", "C", "V"]
+            sk_key = skill_keys[skill_index] if skill_index < len(skill_keys) else "M1"
+            player_dmg *= get_skill_damage_mult(player, equipped, sk_key)
+
+    win = player_dmg >= monster["hp"]
+    result = {"win": win, "monster": monster["name"], "monster_hp": monster["hp"],
+              "damage": int(player_dmg), "coin": 0, "xp": 0, "bounty_gain": 0, "stat_points_gained": 0}
+
+    if win:
+        result["coin"] = monster["coin"]
+        result["xp"] = monster["xp"]
+        player["coin"] += monster["coin"]
+        player["xp"] += monster["xp"]
+        new_level = calc_level(player["xp"])
+        if new_level > MAX_LEVEL:
+            new_level = MAX_LEVEL
+            player["xp"] = xp_to_level(MAX_LEVEL)
+        player["level"] = new_level
+        result["stat_points_gained"] = update_stat_points(player)
+        bounty_gain = max(1, monster["hp"] // 100) * {1: 1, 2: 10, 3: 100}.get(sea, 1)
+        result["bounty_gain"] = add_bounty(player, bounty_gain, f"Giết {monster['name']}")
+        player["total_kills"] = player.get("total_kills", 0) + 1
+        player["quest_progress"] = player.get("quest_progress", 0) + 1
+        player["mastery"][weapon] = player["mastery"].get(weapon, 0) + random.randint(1, 3)
+    return result
+
+def simulate_boss(player, sea, island_key, weapon="trái", skill_index=4):
+    island = SEA_DATA[sea]["islands"][island_key]
+    boss = island.get("boss")
+    if not boss: return None
+
+    stat_dmg = get_stat_damage(player, weapon)
+    mastery_bonus = player["mastery"].get(weapon, 0) * 0.5
+    player_dmg = 100 + stat_dmg + mastery_bonus + player["level"] * 5 + random.randint(-10, 30)
+
+    if weapon == "trái":
+        equipped = player.get("equipped_fruit")
+        if equipped:
+            player_dmg *= get_skill_damage_mult(player, equipped, "V")
+
+    win = player_dmg >= boss["hp"]
+    result = {"win": win, "boss": boss["name"], "boss_hp": boss["hp"],
+              "damage": int(player_dmg), "coin": 0, "xp": 0, "bounty_gain": 0, "stat_points_gained": 0}
+
+    if win:
+        result["coin"] = boss["coin"]
+        result["xp"] = boss["xp"]
+        player["coin"] += boss["coin"]
+        player["xp"] += boss["xp"]
+        new_level = calc_level(player["xp"])
+        if new_level > MAX_LEVEL:
+            new_level = MAX_LEVEL
+            player["xp"] = xp_to_level(MAX_LEVEL)
+        player["level"] = new_level
+        result["stat_points_gained"] = update_stat_points(player)
+        bounty_gain = max(100, boss["hp"] // 10) * {1: 1, 2: 10, 3: 100}.get(sea, 1)
+        result["bounty_gain"] = add_bounty(player, bounty_gain, f"Hạ {boss['name']}")
+        player["bosses_killed"] = player.get("bosses_killed", 0) + 1
+    return result
+# ══════════════════════════════════════════════════════════════════
+# 🖼️ EMBEDS CƠ BẢN
+# ══════════════════════════════════════════════════════════════════
+def build_main_embed():
+    return discord.Embed(
+        title="🏴‍☠️ One Piece • BirthdayTime",
+        description="Hãy bấm nút tham gia game để bắt đầu khám phá vùng biển One Piece!\n\n\u200b\n\u200b",
+        color=0xFFD700
+    )
+
+def build_faction_embed():
+    return discord.Embed(
+        title="🏴‍☠️ CHỌN PHE CỦA BẠN 🏴‍☠️",
+        description="Hãy chọn 1 trong 2 phe dưới đây!\n\n\u200b\n\u200b",
+        color=0x1ABC9C
+    )
+
+def build_game_embed(faction):
+    color = 0xE74C3C if "Hải Tặc" in faction else 0x3498DB
+    return discord.Embed(
+        title="🏴‍☠️ One Piece • BirthdayTime",
+        description=f"Chúc mừng bạn đã chọn phe **{faction}**!\n\n\u200b\n\u200b",
+        color=color
+    )
+
+def build_farm_embed(player):
+    ik = player.get("current_island")
+    island_line = ""
+    if ik:
+        try:
+            island = SEA_DATA[player["current_sea"]]["islands"].get(ik)
+            if island:
+                progress = player.get("quest_progress", 0)
+                island_line = f"📍 **Đảo:** {island['emoji']} **{island['name']}** (`{progress}/{island['quest_kill']}`)\n"
+        except: pass
+    if not island_line:
+        island_line = "📍 **Đảo:** *Chưa chọn — nhấn Islands!*\n"
+
+    points = player.get("stat_points", 0)
+    point_line = f"\n🔴 **`{points}` điểm Stats chưa dùng!**" if points > 0 else ""
+
+    return discord.Embed(
+        title="🌾 Farm • Nhiệm Vụ",
+        description=(
+            f"Nhấn **Quest**, **Islands** hoặc **Start**!\n\n"
+            f"{island_line}"
+            f"⭐ **XP:** `{player['xp']}` | 📊 **Level:** `{player['level']}`\n"
+            f"💰 **Coin:** `{player['coin']}`"
+            f"{point_line}\n\u200b"
+        ),
+        color=0xFF6B35 if points > 0 else 0x2ECC71
+    )
+
+def build_stats_embed(player):
+    stats = player["stats"]
+    base = player["base_stats"]
+    points = player["stat_points"]
+    max_hp = calc_max_hp(player)
+
+    lines = []
+    for k, info in STAT_INFO.items():
+        v = stats[k]
+        bonus = v - base[k]
+        extra = f" *(+{bonus})*" if bonus > 0 else ""
+        lines.append(f"{info['emoji']} **{info['name']}:** `{v}`{extra}")
+
+    return discord.Embed(
+        title="💪 Tăng Cường Chỉ Số",
+        description=(
+            f"📊 **Level:** `{player['level']}`\n"
+            f"🎯 **Điểm còn lại:** `{points}`\n"
+            f"❤️ **HP tối đa:** `{max_hp}`\n\n"
+            "**Chỉ số hiện tại:**\n" + "\n".join(lines) +
+            "\n\n⚠️ Mỗi level = **3 điểm**. 1 điểm = +1 chỉ số.\n\u200b"
+        ),
+        color=0xFF6B35 if points > 0 else 0x95A5A6
+    )
+
+# ══════════════════════════════════════════════════════════════════
+# 🌐 KÊNH CHUNG TRADE / PVP
+# ══════════════════════════════════════════════════════════════════
+async def get_or_create_public_game_channels(guild: discord.Guild):
+    """Tạo kênh Trade và PvP công khai cho tất cả thành viên."""
+    created = []
+    channel_specs = [
+        ("💱-trade", "Kênh Trade — tất cả thành viên trong server đều có thể vào."),
+        ("⚔️-pvp", "Kênh PvP — tất cả thành viên trong server đều có thể vào."),
+    ]
+
+    for channel_name, topic in channel_specs:
+        channel = discord.utils.get(guild.text_channels, name=channel_name)
+        if channel is None:
+            overwrites = {
+                guild.default_role: discord.PermissionOverwrite(
+                    view_channel=True,
+                    send_messages=True,
+                    read_message_history=True,
+                )
+            }
+            if guild.me is not None:
+                overwrites[guild.me] = discord.PermissionOverwrite(
+                    view_channel=True,
+                    send_messages=True,
+                    read_message_history=True,
+                    manage_channels=True,
+                )
+            channel = await guild.create_text_channel(
+                channel_name,
+                overwrites=overwrites,
+                topic=topic,
+                reason="One Piece public Trade/PvP channels",
+            )
+            created.append(channel)
+        else:
+            # Đảm bảo @everyone luôn được xem và chat trong 2 kênh này.
+            await channel.set_permissions(
+                guild.default_role,
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True,
+            )
+
+    return created
+
+# ══════════════════════════════════════════════════════════════════
+# 🏴‍☠️ / ⚓ FACTION CHANNELS
+# ══════════════════════════════════════════════════════════════════
+async def get_or_create_faction_channel(guild: discord.Guild, faction: str, member: discord.Member):
+    """Tạo kênh phe và chỉ cho thành viên phe đó nhìn thấy."""
+    is_pirate = "Hải Tặc" in faction
+    channel_name = "🏴‍☠️-hai-tac" if is_pirate else "⚓-hai-quan"
+    topic = "Kênh riêng của phe Hải Tặc" if is_pirate else "Kênh riêng của phe Hải Quân"
+
+    # Tìm kênh phe đã tồn tại
+    channel = discord.utils.get(guild.text_channels, name=channel_name)
+
+    overwrites = {
+        guild.default_role: discord.PermissionOverwrite(view_channel=False),
+        member: discord.PermissionOverwrite(
+            view_channel=True,
+            send_messages=True,
+            read_message_history=True,
+            connect=True,
+        ),
+    }
+    if guild.me is not None:
+        overwrites[guild.me] = discord.PermissionOverwrite(
+            view_channel=True,
+            send_messages=True,
+            read_message_history=True,
+            manage_channels=True,
+        )
+
+    # Admin có thể quản lý/xem cả hai kênh
+    for role in guild.roles:
+        if role.permissions.administrator and role != guild.default_role:
+            overwrites[role] = discord.PermissionOverwrite(view_channel=True)
+
+    if channel is None:
+        channel = await guild.create_text_channel(
+            channel_name,
+            overwrites=overwrites,
+            topic=topic,
+            reason="One Piece faction setup",
+        )
+        await channel.send(
+            embed=discord.Embed(
+                title=("🏴‍☠️ KÊNH HẢI TẶC" if is_pirate else "⚓ KÊNH HẢI QUÂN"),
+                description=(
+                    "Đây là kênh riêng của **Hải Tặc**. Thành viên Hải Quân không thể nhìn thấy kênh này."
+                    if is_pirate else
+                    "Đây là kênh riêng của **Hải Quân**. Thành viên Hải Tặc không thể nhìn thấy kênh này."
+                ),
+                color=0xE74C3C if is_pirate else 0x3498DB,
+            )
+        )
+    else:
+        # Thêm quyền cho người chơi mới mà không làm mất quyền cũ
+        await channel.set_permissions(
+            member,
+            view_channel=True,
+            send_messages=True,
+            read_message_history=True,
+        )
+        if guild.me is not None:
+            await channel.set_permissions(
+                guild.me,
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True,
+                manage_channels=True,
+            )
+
+    return channel
+
+
+class JoinGameView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.players = {}
+
+    @discord.ui.button(label="Start", emoji="▶️", style=discord.ButtonStyle.success)
+    async def join(self, interaction, button):
+        if interaction.guild is None:
+            await interaction.response.send_message("❌ Lệnh này chỉ dùng trong server!", ephemeral=True)
+            return
+        if interaction.user.id in player_data:
+            await interaction.response.send_message("⚠️ Bạn đã tham gia rồi!", ephemeral=True)
+            return
+        await interaction.response.send_message(
+            embed=build_faction_embed(),
+            view=ChooseFactionView(self),
+            ephemeral=True
+        )
+
+
+class ChooseFactionView(discord.ui.View):
+    def __init__(self, main_view):
+        super().__init__(timeout=120)
+        self.main_view = main_view
+
+    @discord.ui.button(label="Hải Tặc", emoji="🏴‍☠️", style=discord.ButtonStyle.danger)
+    async def pirate(self, i, b): await self._pick(i, "🏴‍☠️ Hải Tặc")
+
+    @discord.ui.button(label="Hải Quân", emoji="⚓", style=discord.ButtonStyle.primary)
+    async def marine(self, i, b): await self._pick(i, "⚓ Hải Quân")
+
+    async def _pick(self, interaction, faction):
+        user = interaction.user
+        if interaction.guild is None:
+            await interaction.response.send_message("❌ Chỉ dùng trong server!", ephemeral=True)
+            return
+        if user.id in player_data:
+            await interaction.response.send_message("⚠️ Bạn đã chọn phe rồi!", ephemeral=True)
+            return
+
+        try:
+            faction_channel = await get_or_create_faction_channel(interaction.guild, faction, user)
+        except discord.Forbidden:
+            await interaction.response.send_message(
+                "❌ Bot thiếu quyền **Quản lý kênh (Manage Channels)** để tạo kênh phe.",
+                ephemeral=True,
+            )
+            return
+        except Exception as e:
+            print(f"[Faction channel] {e}")
+            await interaction.response.send_message(
+                "❌ Không thể tạo kênh phe. Hãy kiểm tra quyền của bot.",
+                ephemeral=True,
+            )
+            return
+
+        player_data[user.id] = create_player(faction)
+        self.main_view.players[user.id] = {"user": user, "faction": faction, "channel_id": faction_channel.id}
+        recalc_stats(player_data[user.id])
+        await interaction.response.edit_message(
+            embed=build_game_embed(faction),
+            view=GameMenuView(faction, user.id)
+        )
+        await interaction.followup.send(
+            f"✅ Bạn đã vào **{faction}**! Kênh riêng của phe: {faction_channel.mention}",
+            ephemeral=True,
+        )
+
+# ══════════════════════════════════════════════════════════════════
+# 🎮 GAME MENU (4 nút chính)
+# ══════════════════════════════════════════════════════════════════
+class GameMenuView(discord.ui.View):
+    def __init__(self, faction, user_id):
+        super().__init__(timeout=None)
+        self.faction = faction
+        self.user_id = user_id
+
+    @discord.ui.button(label="Farm", emoji="🌾", style=discord.ButtonStyle.success, row=0)
+    async def farm(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        player = normalize_player_loadout(player_data.setdefault(self.user_id, create_player(self.faction)))
+        await interaction.response.edit_message(
+            embed=build_farm_embed(player),
+            view=FarmView(self.user_id)
+        )
+
+    @discord.ui.button(label="Shop", emoji="🛒", style=discord.ButtonStyle.primary, row=0)
+    async def shop(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await interaction.response.edit_message(
+            embed=build_shop_embed(player_data[self.user_id], "fruits"),
+            view=ShopView(self.user_id, "fruits")
+        )
+
+    @discord.ui.button(label="Random", emoji="🎲", style=discord.ButtonStyle.danger, row=0)
+    async def random_fruit(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await interaction.response.edit_message(
+            embed=build_gacha_embed(player_data[self.user_id]),
+            view=GachaView(self.user_id)
+        )
+
+    @discord.ui.button(label="Awakening", emoji="✨", style=discord.ButtonStyle.primary, row=0)
+    async def awakening(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await interaction.response.edit_message(
+            embed=build_awakening_embed(player_data[self.user_id], interaction.user),
+            view=AwakeningView(self.user_id)
+        )
+
+# ══════════════════════════════════════════════════════════════════
+# 🌾 FARM VIEW
+# ══════════════════════════════════════════════════════════════════
+class FarmView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+
+    @discord.ui.button(label="Quest", emoji="📜", style=discord.ButtonStyle.success, row=0)
+    async def quest(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        p = player_data[self.user_id]
+        ik = p.get("current_island") or list(SEA_DATA[p["current_sea"]]["islands"].keys())[0]
+        p["current_island"] = ik
+        await interaction.response.edit_message(
+            embed=build_island_quest_embed(p, p["current_sea"], ik),
+            view=IslandQuestView(self.user_id, p["current_sea"], ik)
+        )
+
+    @discord.ui.button(label="Islands", emoji="🏝️", style=discord.ButtonStyle.primary, row=0)
+    async def islands(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        p = player_data[self.user_id]
+        await interaction.response.edit_message(
+            embed=build_island_list_embed(p, p["current_sea"]),
+            view=IslandListView(self.user_id, p["current_sea"])
+        )
+
+    @discord.ui.button(label="Start", emoji="▶️", style=discord.ButtonStyle.primary, row=0)
+    async def start(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await interaction.response.edit_message(
+            embed=build_stats_embed(player_data[self.user_id]),
+            view=StatsView(self.user_id)
+        )
+
+    @discord.ui.button(label="Profile", emoji="👤", style=discord.ButtonStyle.primary, row=0)
+    async def profile(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        user = bot.get_user(self.user_id)
+        await interaction.response.edit_message(
+            embed=build_profile_embed(player_data[self.user_id], user),
+            view=ProfileView(self.user_id)
+        )
+
+    @discord.ui.button(label="Inventory", emoji="🎒", style=discord.ButtonStyle.primary, row=1)
+    async def inventory(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await interaction.response.edit_message(
+            embed=build_inventory_embed(player_data[self.user_id], "fruits"),
+            view=InventoryView(self.user_id, "fruits")
+        )
+
+    @discord.ui.button(label="Raid", emoji="👹", style=discord.ButtonStyle.danger, row=1)
+    async def raid(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await interaction.response.edit_message(
+            embed=build_raid_menu_embed(player_data[self.user_id]),
+            view=RaidView(self.user_id)
+        )
+
+    @discord.ui.button(label="Bounty", emoji="💰", style=discord.ButtonStyle.primary, row=1)
+    async def bounty(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        user = bot.get_user(self.user_id)
+        await interaction.response.edit_message(
+            embed=build_bounty_embed(user, player_data[self.user_id]),
+            view=BountyView(self.user_id)
+        )
+
+    @discord.ui.button(label="Exit", emoji="🚪", style=discord.ButtonStyle.secondary, row=1)
+    async def exit(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        for c in self.children: c.disabled = True
+        await interaction.response.edit_message(
+            embed=discord.Embed(title="🚪 Đã Thoát Farm", description="Hẹn gặp lại!", color=0x95A5A6),
+            view=self
+        )
+
+# ══════════════════════════════════════════════════════════════════
+# 💪 STATS VIEW
+# ══════════════════════════════════════════════════════════════════
+class StatsView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=180); self.user_id = user_id
+    @discord.ui.button(label="Defense +1", emoji="🛡️", style=discord.ButtonStyle.primary, row=0)
+    async def d(self, i, b): await self._up(i, "defense")
+    @discord.ui.button(label="Fruit +1", emoji="🍎", style=discord.ButtonStyle.success, row=0)
+    async def f(self, i, b): await self._up(i, "fruit")
+    @discord.ui.button(label="Về Farm", emoji="↩️", style=discord.ButtonStyle.secondary, row=1)
+    async def back(self, i, b):
+        if i.user.id != self.user_id: await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=build_farm_embed(player_data[self.user_id]), view=FarmView(self.user_id))
+    async def _up(self, interaction, stat):
+        if interaction.user.id != self.user_id: await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        p = player_data[self.user_id]
+        if p["stat_points"] <= 0: await interaction.response.send_message("❌ Hết điểm! Lên level để nhận thêm.", ephemeral=True); return
+        p["base_stats"][stat] += 1; p["stat_points"] -= 1; recalc_stats(p)
+        await interaction.response.edit_message(embed=build_stats_embed(p), view=StatsView(self.user_id))
+
+# ══════════════════════════════════════════════════════════════════
+# 👤 PROFILE VIEW
+# ══════════════════════════════════════════════════════════════════
+class ProfileView(discord.ui.View):
+    def __init__(self, user_id, viewer_id=None):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+        self.viewer_id = viewer_id or user_id
+
+    @discord.ui.button(label="Đổi Bio", emoji="📝", style=discord.ButtonStyle.primary)
+    async def bio(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải profile bạn!", ephemeral=True); return
+        await interaction.response.send_modal(BioModal(self.user_id))
+
+    @discord.ui.button(label="Tộc V4", emoji="👑", style=discord.ButtonStyle.danger)
+    async def race(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải profile bạn!", ephemeral=True); return
+        await interaction.response.edit_message(
+            embed=build_race_embed(player_data[self.user_id]),
+            view=RaceView(self.user_id)
+        )
+
+    @discord.ui.button(label="BXH Level", emoji="📊", style=discord.ButtonStyle.primary)
+    async def lb(self, interaction, button):
+        ranked = sorted(player_data.items(), key=lambda x: (x[1]["level"], x[1]["xp"]), reverse=True)[:10]
+        medals = ["🥇", "🥈", "🥉"]
+        lines = []
+        for i, (uid, p) in enumerate(ranked, 1):
+            u = bot.get_user(uid)
+            n = u.display_name if u else f"User {uid}"
+            medal = medals[i-1] if i <= 3 else f"`{i}.`"
+            lines.append(f"{medal} **{n}** — Lv.`{p['level']}`")
+        await interaction.response.send_message(
+            embed=discord.Embed(title="🏆 BXH Level", description="\n".join(lines), color=0xFFD700),
+            ephemeral=True
+        )
+
+    @discord.ui.button(label="Về Farm", emoji="↩️", style=discord.ButtonStyle.secondary)
+    async def back(self, interaction, button):
+        if interaction.user.id != self.viewer_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await interaction.response.edit_message(
+            embed=build_farm_embed(player_data[self.user_id]),
+            view=FarmView(self.user_id)
+        )
+
+class BioModal(discord.ui.Modal, title="Đổi Tiểu Sử"):
+    bio_input = discord.ui.TextInput(
+        label="Tiểu sử (tối đa 100 ký tự)",
+        style=discord.TextStyle.paragraph,
+        max_length=100,
+        required=False
+    )
+    def __init__(self, user_id):
+        super().__init__()
+        self.user_id = user_id
+    async def on_submit(self, interaction):
+        player_data[self.user_id]["bio"] = self.bio_input.value or ""
+        await interaction.response.send_message("✅ Đã cập nhật tiểu sử!", ephemeral=True)
+
+def build_profile_embed(player, user):
+    level = player["level"]
+    bounty = player.get("bounty", 0)
+    rank = get_bounty_rank(bounty)
+    title = get_player_title(player)
+    title_str = f"{TITLES[title]['emoji']} **{TITLES[title]['name']}**" if title else "*Chưa có*"
+
+    fruit_key = player.get("equipped_fruit")
+    fruit_line = "*Không có*"
+    if fruit_key:
+        f = SHOP_DATA["fruits"].get(fruit_key)
+        if f:
+            awk = " ✨" if is_fruit_fully_awakened(player, fruit_key) else ""
+            fruit_line = f"{f['emoji']} **{f['name']}**{awk}"
+
+    stats = player["stats"]
+    base = player["base_stats"]
+    hp = calc_max_hp(player)
+    race = RACES.get(player.get("race", "human"), RACES["human"])
+    r_lvl = player.get("race_level", 1)
+
+    cur_xp, need_xp = xp_progress_in_level(player["xp"])
+    pct = (cur_xp / need_xp * 100) if need_xp > 0 else 100
+    filled = int(15 * pct / 100) if need_xp > 0 else 15
+    bar = "█" * filled + "░" * (15 - filled)
+
+    pvp_w = player.get("pvp_wins", 0)
+    pvp_l = player.get("pvp_losses", 0)
+    tot = pvp_w + pvp_l
+    wr = (pvp_w / tot * 100) if tot > 0 else 0
+    pt_h = int(player.get("playtime", 0) // 3600)
+    pt_m = int((player.get("playtime", 0) % 3600) // 60)
+
+    embed = discord.Embed(
+        title=f"👤 Hồ Sơ • {user.display_name}",
+        description=(
+            f"🏴 **Phe:** {player.get('faction', '*Không*')}\n"
+            f"🏆 **Danh hiệu:** {title_str}\n"
+            f"{rank['emoji']} **{rank['name']}**\n"
+            f"💰 `{format_bounty(bounty)}`\n\n"
+            f"**📊 Level {level}/{MAX_LEVEL}**\n"
+            f"`{bar}` `{format_number(player['xp'])}`\n\n"
+            f"🍎 **Trái:** {fruit_line}\n"
+            f"👑 **Tộc:** {race['emoji']} {race['name']} V{r_lvl}\n"
+            f"❤️ **HP:** `{hp:,}`\n\n"
+            "**⚔️ Chỉ số:**\n"
+            f"🛡️ Defense: `{stats['defense']}`" + (f" *(+{stats['defense']-base['defense']})*" if stats['defense']>base['defense'] else "") + "\n"
+            f"🍎 Fruit: `{stats['fruit']}`" + (f" *(+{stats['fruit']-base['fruit']})*" if stats['fruit']>base['fruit'] else "")
+        ),
+        color=rank["color"]
+    )
+    embed.add_field(name="💰 Tài Sản", value=f"💰 `{format_number(player['coin'])}`\n💎 `{format_number(player.get('fragments',0))}`", inline=True)
+    embed.add_field(name="⚔️ PvP", value=f"🏆 `{pvp_w}`\n💀 `{pvp_l}`\n📊 `{wr:.1f}%`", inline=True)
+    embed.add_field(name="📈 Khác", value=f"👹 `{player.get('bosses_killed',0)}`\n💀 `{player.get('total_kills',0):,}`", inline=True)
+    if player.get("bio"):
+        embed.add_field(name="📝 Tiểu sử", value=f"*{player['bio']}*", inline=False)
+    embed.set_thumbnail(url=user.display_avatar.url)
+    embed.set_footer(text=f"⏱️ {pt_h}h{pt_m}m • 🌊 Sea {player.get('current_sea',1)}/3")
+    return embed
+# ══════════════════════════════════════════════════════════════════
+# 🛒 SHOP VIEW
+# ══════════════════════════════════════════════════════════════════
+def build_shop_embed(player, category="fruits"):
+    items=SHOP_DATA["fruits"]; sea=player.get("current_sea",1)
+    filtered={k:v for k,v in items.items() if v["sea"]<=sea}; sorted_items=sorted(filtered.items(),key=lambda x:x[1]["price"])
+    lines=[]
+    for key,item in sorted_items[:8]:
+        owned=key in player.get("inventory",{}).get("fruits",[]); st="✅" if owned else "🛒"
+        lines.append(f"{st} {item['emoji']} **{item['name']}** — `{item['price']:,}` 💰 *({item['rarity']})*")
+    return discord.Embed(title="🛒 Shop • 🍎 Trái Ác Quỷ",description=f"💰 `{player['coin']:,}`\n🌊 Sea `{sea}/3`\n\n"+"\n".join(lines)+f"\n\n*Còn {max(0,len(sorted_items)-8)} vật phẩm...*\n\u200b",color=0xFFD700)
+
+class ShopView(discord.ui.View):
+    def __init__(self,user_id,category="fruits",page=0):
+        super().__init__(timeout=180); self.user_id=user_id; self.category="fruits"; self.page=page
+        items=SHOP_DATA["fruits"]; sea=player_data[user_id].get("current_sea",1); filtered={k:v for k,v in items.items() if v["sea"]<=sea}; sorted_items=sorted(filtered.items(),key=lambda x:x[1]["price"])
+        per=5; start=page*per
+        for i,(key,item) in enumerate(sorted_items[start:start+per]):
+            btn=discord.ui.Button(label=item["name"][:12],emoji=item["emoji"],style=discord.ButtonStyle.success,row=0); btn.callback=self._buy(key); self.add_item(btn)
+        prev=discord.ui.Button(label="◀",emoji="⬅️",style=discord.ButtonStyle.secondary,row=1,disabled=page==0); prev.callback=self._prev; self.add_item(prev)
+        nxt=discord.ui.Button(label="▶",emoji="➡️",style=discord.ButtonStyle.secondary,row=1,disabled=(start+per>=len(sorted_items))); nxt.callback=self._next; self.add_item(nxt)
+        back=discord.ui.Button(label="Về Farm",emoji="↩️",style=discord.ButtonStyle.secondary,row=1); back.callback=self._back; self.add_item(back)
+    def _buy(self,key):
+        async def cb(i):
+            if i.user.id!=self.user_id: await i.response.send_message("⚠️ Không phải bạn!",ephemeral=True); return
+            p=player_data[self.user_id]; item=SHOP_DATA["fruits"][key]
+            if p["coin"]<item["price"]: await i.response.send_message(f"❌ Không đủ Coin! Cần `{item['price']:,}`.",ephemeral=True); return
+            if key in p.setdefault("inventory",{}).setdefault("fruits",[]): await i.response.send_message("⚠️ Bạn đã sở hữu trái này!",ephemeral=True); return
+            p["coin"]-=item["price"]; p["inventory"]["fruits"].append(key); p["equipped_fruit"]=key
+            await i.response.edit_message(embed=build_shop_embed(p),view=ShopView(self.user_id,"fruits",self.page)); await i.followup.send(f"✅ Mua và trang bị **{item['emoji']} {item['name']}**!",ephemeral=True)
+        return cb
+    async def _prev(self,i):
+        if i.user.id!=self.user_id:return
+        await i.response.edit_message(embed=build_shop_embed(player_data[self.user_id]),view=ShopView(self.user_id,"fruits",self.page-1))
+    async def _next(self,i):
+        if i.user.id!=self.user_id:return
+        await i.response.edit_message(embed=build_shop_embed(player_data[self.user_id]),view=ShopView(self.user_id,"fruits",self.page+1))
+    async def _back(self,i):
+        if i.user.id!=self.user_id: await i.response.send_message("⚠️ Không phải bạn!",ephemeral=True); return
+        await i.response.edit_message(embed=build_farm_embed(player_data[self.user_id]),view=FarmView(self.user_id))
+
+# ══════════════════════════════════════════════════════════════════
+# 🎒 INVENTORY VIEW
+# ══════════════════════════════════════════════════════════════════
+def build_inventory_embed(player, category="fruits"):
+    items=player.get("inventory",{}).get("fruits",[]); equipped=player.get("equipped_fruit"); lines=[]
+    if not items: lines.append("*Chưa sở hữu trái nào!*")
+    for k in items[:20]:
+        item=SHOP_DATA["fruits"].get(k)
+        if item: lines.append(f"{'✅' if k==equipped else '  '} {item['emoji']} **{item['name']}** *({item['rarity']})*")
+    stats=player["stats"]; base=player["base_stats"]; stat_lines=[]
+    for k in ("defense","fruit"):
+        info=STAT_INFO[k]; bonus=stats[k]-base[k]; extra=f" *(+{bonus})*" if bonus>0 else ""; stat_lines.append(f"{info['emoji']} **{info['name']}:** `{stats[k]}`{extra}")
+    eq_line=""
+    if equipped and equipped in SHOP_DATA["fruits"]:
+        eq=SHOP_DATA["fruits"][equipped]; eq_line=f"\n🍎 **Đang dùng:** {eq['emoji']} **{eq['name']}**\n"
+    return discord.Embed(title="🎒 Inventory • 🍎 Trái",description=f"📦 **Số trái:** `{len(items)}`\n{eq_line}\n**📊 Chỉ số:**\n"+"\n".join(stat_lines)+"\n\n**🎁 Danh sách Trái:**\n"+"\n".join(lines)+"\n\n\u200b",color=0x9B59B6)
+
+class InventoryView(discord.ui.View):
+    def __init__(self,user_id,category="fruits",page=0):
+        super().__init__(timeout=180); self.user_id=user_id; self.category="fruits"; self.page=page
+        items=player_data[user_id].get("inventory",{}).get("fruits",[]); per=10; start=page*per; equipped=player_data[user_id].get("equipped_fruit")
+        for i,key in enumerate(items[start:start+per]):
+            item=SHOP_DATA["fruits"].get(key)
+            if not item: continue
+            btn=discord.ui.Button(label=f"{'✅' if key==equipped else ''} {item['name'][:14]}".strip(),emoji=item["emoji"],style=discord.ButtonStyle.success if key==equipped else discord.ButtonStyle.primary,row=i//5); btn.callback=self._equip(key); self.add_item(btn)
+        prev=discord.ui.Button(label="◀",emoji="⬅️",style=discord.ButtonStyle.secondary,row=2,disabled=page==0); prev.callback=self._prev; self.add_item(prev)
+        nxt=discord.ui.Button(label="▶",emoji="➡️",style=discord.ButtonStyle.secondary,row=2,disabled=(start+per>=len(items))); nxt.callback=self._next; self.add_item(nxt)
+        back=discord.ui.Button(label="Về Farm",emoji="↩️",style=discord.ButtonStyle.secondary,row=2); back.callback=self._back; self.add_item(back)
+    def _equip(self,key):
+        async def cb(i):
+            if i.user.id!=self.user_id: await i.response.send_message("⚠️ Không phải bạn!",ephemeral=True); return
+            p=player_data[self.user_id]; item=SHOP_DATA["fruits"].get(key)
+            if not item:return
+            if p.get("equipped_fruit")==key: p["equipped_fruit"]=None; msg=f"🔓 Đã gỡ **{item['name']}**"
+            else: p["equipped_fruit"]=key; msg=f"✅ Trang bị **{item['emoji']} {item['name']}**"
+            await i.response.edit_message(embed=build_inventory_embed(p),view=InventoryView(self.user_id,"fruits",self.page)); await i.followup.send(msg,ephemeral=True)
+        return cb
+    async def _prev(self,i):
+        if i.user.id!=self.user_id:return
+        await i.response.edit_message(embed=build_inventory_embed(player_data[self.user_id]),view=InventoryView(self.user_id,"fruits",self.page-1))
+    async def _next(self,i):
+        if i.user.id!=self.user_id:return
+        await i.response.edit_message(embed=build_inventory_embed(player_data[self.user_id]),view=InventoryView(self.user_id,"fruits",self.page+1))
+    async def _back(self,i):
+        if i.user.id!=self.user_id: await i.response.send_message("⚠️ Không phải bạn!",ephemeral=True); return
+        await i.response.edit_message(embed=build_farm_embed(player_data[self.user_id]),view=FarmView(self.user_id))
+
+# ══════════════════════════════════════════════════════════════════
+# 🏝️ ISLAND VIEWS
+# ══════════════════════════════════════════════════════════════════
+def build_island_list_embed(player, sea=None):
+    if sea is None: sea = player.get("current_sea", 1)
+    islands = SEA_DATA[sea]["islands"]
+    current = player.get("current_island")
+    lines = []
+    for key, isl in islands.items():
+        locked = player["level"] < isl["level_req"]
+        st = "📍" if key == current else ("🔒" if locked else "✅")
+        boss_info = f" 👹 {isl['boss']['name']}" if isl.get("boss") else ""
+        lines.append(f"{st} {isl['emoji']} **{isl['name']}** (Lv.{isl['level_req']}+){boss_info}")
+    return discord.Embed(
+        title=f"{SEA_DATA[sea]['emoji']} {SEA_DATA[sea]['name']} • Chọn Đảo",
+        description=(f"⭐ `{player['xp']}` | 💰 `{player['coin']}` | 📊 Lv.`{player['level']}`\n"
+                     f"🌊 Sea `{sea}/3`\n\n" + "\n".join(lines[:12]) + "\n\n\u200b"),
+        color=0x3498DB
+    )
+
+def build_island_quest_embed(player, sea, island_key):
+    isl = SEA_DATA[sea]["islands"][island_key]
+    progress = player.get("quest_progress", 0)
+    need = isl["quest_kill"]
+    boss_line = f"\n👹 Boss: **{isl['boss']['name']}**" if isl.get("boss") else ""
+    filled = int(10 * progress / need) if need else 0
+    bar = "█" * filled + "░" * (10 - filled)
+    return discord.Embed(
+        title=f"{isl['emoji']} {isl['name']} • Nhiệm Vụ",
+        description=(f"🌊 {SEA_DATA[sea]['name']} • Sea {sea}/3\n\n"
+                     f"**Đánh** `{need}` **quái**\n**Tiến độ:** `{progress}/{need}`{boss_line}\n\n"
+                     f"⭐ `{player['xp']}` | 💰 `{player['coin']}` | 📊 Lv.`{player['level']}`\n\n"
+                     f"📊 `{bar}` {progress}/{need}\n\u200b"),
+        color=0xE67E22 if progress < need else 0x2ECC71
+    )
+
+def build_weapon_choose_embed():
+    return discord.Embed(
+        title="🍎 Chọn Trái Ác Quỷ",
+        description="Chỉ sử dụng **Trái Ác Quỷ** để chiến đấu.\n\n🍎 **Trái**\n\n\u200b",
+        color=0x9B59B6
+    )
+
+class IslandListView(discord.ui.View):
+    def __init__(self, user_id, sea=None):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+        p = player_data[user_id]
+        self.sea = sea if sea is not None else p.get("current_sea", 1)
+        islands = SEA_DATA[self.sea]["islands"]
+        current = p.get("current_island")
+        for i, (key, isl) in enumerate(islands.items()):
+            if i >= 12: break
+            locked = p["level"] < isl["level_req"]
+            is_cur = key == current
+            style = discord.ButtonStyle.success if is_cur else (
+                discord.ButtonStyle.secondary if locked else discord.ButtonStyle.primary)
+            emoji = "📍" if is_cur else ("🔒" if locked else isl["emoji"])
+            btn = discord.ui.Button(label=isl["name"][:16], emoji=emoji, style=style,
+                custom_id=f"il_{self.sea}_{key}", row=i//3, disabled=locked and not is_cur)
+            btn.callback = self._pick(key)
+            self.add_item(btn)
+        prev = discord.ui.Button(label="◀ Sea", emoji="⬅️", style=discord.ButtonStyle.secondary, row=4, disabled=self.sea<=1)
+        prev.callback = self._prev; self.add_item(prev)
+        nxt = discord.ui.Button(label="Sea ▶", emoji="➡️", style=discord.ButtonStyle.secondary, row=4,
+            disabled=self.sea>=3 or (self.sea+1) not in p["unlocked_seas"])
+        nxt.callback = self._next; self.add_item(nxt)
+        back = discord.ui.Button(label="Về Farm", emoji="↩️", style=discord.ButtonStyle.secondary, row=4)
+        back.callback = self._back; self.add_item(back)
+    def _pick(self, ik):
+        async def cb(i):
+            if i.user.id != self.user_id:
+                await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+            p = player_data[self.user_id]
+            if p.get("current_island") != ik: p["quest_progress"] = 0
+            p["current_island"] = ik
+            p["current_sea"] = self.sea
+            await i.response.edit_message(embed=build_island_quest_embed(p, self.sea, ik),
+                view=IslandQuestView(self.user_id, self.sea, ik))
+        return cb
+    async def _prev(self, i):
+        if i.user.id != self.user_id: return
+        if self.sea > 1:
+            player_data[self.user_id]["current_sea"] = self.sea - 1
+            await i.response.edit_message(embed=build_island_list_embed(player_data[self.user_id], self.sea - 1),
+                view=IslandListView(self.user_id, self.sea - 1))
+    async def _next(self, i):
+        if i.user.id != self.user_id: return
+        p = player_data[self.user_id]
+        if self.sea < 3 and (self.sea + 1) in p["unlocked_seas"]:
+            p["current_sea"] = self.sea + 1
+            await i.response.edit_message(embed=build_island_list_embed(p, self.sea + 1),
+                view=IslandListView(self.user_id, self.sea + 1))
+    async def _back(self, i):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=build_farm_embed(player_data[self.user_id]), view=FarmView(self.user_id))
+
+class IslandQuestView(discord.ui.View):
+    def __init__(self, user_id, sea, island_key):
+        super().__init__(timeout=120)
+        self.user_id = user_id; self.sea = sea; self.island_key = island_key
+    @discord.ui.button(label="Bắt Đầu Đánh", emoji="⚔️", style=discord.ButtonStyle.danger)
+    async def start(self, i, b):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=build_weapon_choose_embed(),
+            view=WeaponChooseView(self.user_id, self.sea, self.island_key))
+    @discord.ui.button(label="Đánh Boss", emoji="👹", style=discord.ButtonStyle.success)
+    async def boss(self, i, b):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        isl = SEA_DATA[self.sea]["islands"][self.island_key]
+        p = player_data[self.user_id]
+        if not isl.get("boss"):
+            await i.response.send_message("❌ Đảo không có Boss!", ephemeral=True); return
+        if p["quest_progress"] < isl["quest_kill"]:
+            await i.response.send_message(f"⚠️ Cần đánh đủ `{isl['quest_kill']}` quái!", ephemeral=True); return
+        res = simulate_boss(p, self.sea, self.island_key, "trái", 4)
+        em = discord.Embed(title=f"👹 {isl['boss']['name']} {'🏆' if res['win'] else '💀'}",
+            description=(f"❤️ HP: `{res['boss_hp']:,}`\n💥 Dmg: `{res['damage']:,}`\n\n" +
+                (f"💰 +`{res['coin']:,}`\n⭐ +`{res['xp']:,}`\n💰 Bounty +`{res['bounty_gain']:,}`" if res['win'] else "❌ Thất bại!")) ,
+            color=0xFFD700 if res['win'] else 0xE74C3C)
+        await i.response.edit_message(embed=em, view=IslandQuestView(self.user_id, self.sea, self.island_key))
+    @discord.ui.button(label="Quay Lại", emoji="↩️", style=discord.ButtonStyle.secondary)
+    async def back(self, i, b):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=build_island_list_embed(player_data[self.user_id], self.sea),
+            view=IslandListView(self.user_id, self.sea))
+
+class WeaponChooseView(discord.ui.View):
+    def __init__(self, user_id, sea, island_key):
+        super().__init__(timeout=120); self.user_id=user_id; self.sea=sea; self.island_key=island_key
+    @discord.ui.button(label="Dùng Trái Ác Quỷ", emoji="🍎", style=discord.ButtonStyle.success, row=0)
+    async def trai(self, i, b):
+        if i.user.id != self.user_id: await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=build_fight_embed(player_data[self.user_id], "trái"), view=FightView(self.user_id,self.sea,self.island_key,"trái"))
+    @discord.ui.button(label="Quay Lại", emoji="↩️", style=discord.ButtonStyle.secondary, row=1)
+    async def back(self, i, b):
+        if i.user.id != self.user_id: await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=build_island_quest_embed(player_data[self.user_id],self.sea,self.island_key), view=IslandQuestView(self.user_id,self.sea,self.island_key))
+
+def build_fight_embed(player, weapon):
+    mastery = player["mastery"].get(weapon, 0)
+    return discord.Embed(
+        title=f"{WEAPON_EMOJI[weapon]} Chiến Đấu • {weapon.upper()}",
+        description=f"🔧 Thông thạo: `{mastery}`\n⭐ XP: `{player['xp']}`\n\nChọn chiêu!\n\u200b",
+        color=0x9B59B6
+    )
+
+class FightView(discord.ui.View):
+    def __init__(self, user_id, sea, island_key, weapon):
+        super().__init__(timeout=120)
+        self.user_id = user_id; self.sea = sea; self.island_key = island_key; self.weapon = weapon
+        for i, sk in enumerate(SKILLS[weapon]):
+            btn = discord.ui.Button(label=f"Chiêu {i+1}", emoji="✨", style=discord.ButtonStyle.primary, row=0)
+            btn.callback = self._atk(i); self.add_item(btn)
+        back = discord.ui.Button(label="Quay Lại", emoji="↩️", style=discord.ButtonStyle.secondary, row=1)
+        back.callback = self._back; self.add_item(back)
+    def _atk(self, idx):
+        async def cb(i):
+            if i.user.id != self.user_id:
+                await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+            p = player_data[self.user_id]
+            now = time.time()
+            if now - p.get("last_fight", 0) < FIGHT_COOLDOWN:
+                await i.response.send_message(f"⏳ Chờ `{FIGHT_COOLDOWN - int(now - p['last_fight'])}s`!", ephemeral=True); return
+            p["last_fight"] = now
+            res = simulate_fight(p, self.sea, self.island_key, self.weapon, idx)
+            isl = SEA_DATA[self.sea]["islands"][self.island_key]
+            em = discord.Embed(
+                title=f"🏆 Thắng {res['monster']}!" if res['win'] else f"💀 Thua {res['monster']}!",
+                description=(
+                    f"👹 HP: `{res['monster_hp']}`\n💥 Dmg: `{res['damage']}`\n\n" +
+                    (f"💰 +`{res['coin']}`\n⭐ +`{res['xp']}`\n💰 Bounty +`{res['bounty_gain']}`\n" if res['win'] else "❌ Không nhận thưởng!") +
+                    f"\n📊 Lv.`{p['level']}` | 🎯 `{p['quest_progress']}/{isl['quest_kill']}`"),
+                color=0x2ECC71 if res['win'] else 0xE74C3C)
+            view = QuestCompleteView(self.user_id, self.sea, self.island_key) if p["quest_progress"] >= isl["quest_kill"] else self
+            await i.response.edit_message(embed=em, view=view)
+        return cb
+    async def _back(self, i):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=build_weapon_choose_embed(),
+            view=WeaponChooseView(self.user_id, self.sea, self.island_key))
+
+class QuestCompleteView(discord.ui.View):
+    def __init__(self, user_id, sea, island_key):
+        super().__init__(timeout=120)
+        self.user_id = user_id; self.sea = sea; self.island_key = island_key
+    @discord.ui.button(label="Nhận & Tiếp Tục", emoji="🎁", style=discord.ButtonStyle.success)
+    async def claim(self, i, b):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        p = player_data[self.user_id]
+        isl = SEA_DATA[self.sea]["islands"][self.island_key]
+        p["coin"] += isl["level_req"] * 1000
+        p["xp"] += isl["level_req"] * 500
+        p["quest_progress"] = 0
+        await i.response.edit_message(embed=build_island_list_embed(p, self.sea),
+            view=IslandListView(self.user_id, self.sea))
+    @discord.ui.button(label="Ở Lại", emoji="🔁", style=discord.ButtonStyle.secondary)
+    async def stay(self, i, b):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        p = player_data[self.user_id]
+        p["quest_progress"] = 0
+        await i.response.edit_message(embed=build_weapon_choose_embed(),
+            view=WeaponChooseView(self.user_id, self.sea, self.island_key))
+
+# ══════════════════════════════════════════════════════════════════
+# ✨ AWAKENING VIEW
+# ══════════════════════════════════════════════════════════════════
+def build_awakening_embed(player, user=None):
+    eq = player.get("equipped_fruit")
+    frag = player.get("fragments", 0)
+    if not eq:
+        return discord.Embed(title="✨ Awakening",
+            description=f"💎 `{frag:,}`\n\n❌ Chưa trang bị trái!", color=0x9B59B6)
+    info = AWAKENING_SKILLS.get(eq)
+    if not info:
+        return discord.Embed(title="✨ Awakening",
+            description=f"❌ Trái **{SHOP_DATA['fruits'][eq]['name']}** không thể awaken!", color=0x95A5A6)
+    fruit = SHOP_DATA["fruits"][eq]
+    awk = player.get("awakened_skills", {}).get(eq, [])
+    skill_lines = []
+    for sk in ["Z", "X", "C", "V"]:
+        si = info["skills"].get(sk)
+        if not si: continue
+        a = sk in awk
+        st = "✨" if a else "🔒"
+        nm = si["awakened_name"] if a else sk
+        skill_lines.append(f"{st} **{sk}** → {si['emoji']} {nm}\n    💎 `{si['fragment']:,}` • Dmg ×`{si['damage_mult']}`")
+    tot = len(info["skills"]); done = len(awk)
+    pct = (done / tot * 100) if tot else 0
+    filled = int(10 * done / tot) if tot else 0
+    bar = "█" * filled + "░" * (10 - filled)
+    if done == tot:
+        fb = info["full_bonus"]
+        full = f"\n🌟 **FULL AWAKENING:** {fb['name']}\n*{fb['desc']}*\nBonus ×`{fb['damage_mult']}`"
+    else:
+        full = "\n⚠️ Cần awaken **cả 4 chiêu** để mở Full!"
+    return discord.Embed(
+        title=f"✨ Awakening • {fruit['emoji']} {fruit['name']}",
+        description=(f"💎 **Fragment:** `{frag:,}`\n"
+                     f"📊 `{bar}` {done}/{tot} ({pct:.0f}%)\n\n"
+                     "**📜 Chiêu:**\n" + "\n".join(skill_lines) + f"{full}\n\u200b"),
+        color=info["color"]
+    )
+
+class AwakeningView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+        p = player_data[user_id]
+        eq = p.get("equipped_fruit")
+        if not eq or eq not in AWAKENING_SKILLS:
+            btn = discord.ui.Button(label="Về Farm", emoji="↩️", style=discord.ButtonStyle.secondary)
+            btn.callback = self._back; self.add_item(btn); return
+        info = AWAKENING_SKILLS[eq]
+        awk = p.get("awakened_skills", {}).get(eq, [])
+        for sk in ["Z", "X", "C", "V"]:
+            si = info["skills"].get(sk)
+            if not si: continue
+            a = sk in awk
+            can = p.get("fragments", 0) >= si["fragment"]
+            btn = discord.ui.Button(
+                label=f"{sk} - {si['fragment']:,}💎",
+                emoji="✨" if a else ("✅" if can else "🔒"),
+                style=discord.ButtonStyle.success if a else (
+                    discord.ButtonStyle.primary if can else discord.ButtonStyle.secondary),
+                custom_id=f"awk_{sk}", row=0, disabled=a)
+            btn.callback = self._awaken(sk, eq); self.add_item(btn)
+        fb = discord.ui.Button(label="Full Awaken", emoji="🌟", style=discord.ButtonStyle.danger, row=1)
+        fb.callback = self._full(eq); self.add_item(fb)
+        rb = discord.ui.Button(label="Raid", emoji="👹", style=discord.ButtonStyle.secondary, row=1)
+        rb.callback = self._raid; self.add_item(rb)
+        bb = discord.ui.Button(label="Về Farm", emoji="↩️", style=discord.ButtonStyle.secondary, row=1)
+        bb.callback = self._back; self.add_item(bb)
+    def _awaken(self, sk, fk):
+        async def cb(i):
+            if i.user.id != self.user_id:
+                await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+            p = player_data[self.user_id]
+            info = AWAKENING_SKILLS[fk]; si = info["skills"][sk]
+            awk = p.get("awakened_skills", {}).get(fk, [])
+            if sk in awk:
+                await i.response.send_message("✅ Đã awaken!", ephemeral=True); return
+            if p.get("fragments", 0) < si["fragment"]:
+                await i.response.send_message(f"❌ Thiếu `{si['fragment']-p['fragments']:,}` Fragment!", ephemeral=True); return
+            p["fragments"] -= si["fragment"]
+            p.setdefault("awakened_skills", {}).setdefault(fk, []).append(sk)
+            full = len(p["awakened_skills"][fk]) == 4
+            em = discord.Embed(title="✨ AWAKEN THÀNH CÔNG!",
+                description=(f"⚔️ **{sk}** → {si['emoji']} **{si['awakened_name']}**\n"
+                             f"💥 Damage ×`{si['damage_mult']}`\n"
+                             f"💎 -`{si['fragment']:,}` • Còn `{p['fragments']:,}`"),
+                color=info["color"])
+            if full:
+                fbi = info["full_bonus"]
+                em.add_field(name="🌟 FULL AWAKENING!", value=f"**{fbi['name']}**\nBonus ×`{fbi['damage_mult']}`", inline=False)
+            await i.response.edit_message(embed=em, view=AwakeningView(self.user_id))
+        return cb
+    def _full(self, fk):
+        async def cb(i):
+            if i.user.id != self.user_id:
+                await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+            p = player_data[self.user_id]
+            info = AWAKENING_SKILLS[fk]
+            awk = p.get("awakened_skills", {}).get(fk, [])
+            if len(awk) == 4:
+                await i.response.send_message("✅ Đã full!", ephemeral=True); return
+            cost = sum(info["skills"][sk]["fragment"] for sk in ["Z","X","C","V"] if sk not in awk)
+            if p.get("fragments", 0) < cost:
+                await i.response.send_message(f"❌ Cần `{cost:,}` Fragment!", ephemeral=True); return
+            p["fragments"] -= cost
+            p.setdefault("awakened_skills", {})[fk] = ["Z","X","C","V"]
+            fbi = info["full_bonus"]
+            em = discord.Embed(title="🌟 FULL AWAKENING!",
+                description=f"**{fbi['name']}**\n*{fbi['desc']}*\n\n💥 ×`{fbi['damage_mult']}`\n💎 -`{cost:,}` • Còn `{p['fragments']:,}`",
+                color=0xFFD700)
+            await i.response.edit_message(embed=em, view=AwakeningView(self.user_id))
+        return cb
+    async def _raid(self, i):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.send_message(embed=build_raid_menu_embed(player_data[self.user_id]),
+            view=RaidView(self.user_id), ephemeral=True)
+    async def _back(self, i):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=build_farm_embed(player_data[self.user_id]), view=FarmView(self.user_id))
+
+# ══════════════════════════════════════════════════════════════════
+# 🎲 GACHA VIEW
+# ══════════════════════════════════════════════════════════════════
+class GachaView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+    @discord.ui.button(label="Quay x1", emoji="🎯", style=discord.ButtonStyle.success, row=0)
+    async def r1(self, i, b): await self._roll(i, 1, "single")
+    @discord.ui.button(label="Quay x10", emoji="🎁", style=discord.ButtonStyle.primary, row=0)
+    async def r10(self, i, b): await self._roll(i, 10, "x10")
+    @discord.ui.button(label="Quay x50", emoji="🌟", style=discord.ButtonStyle.danger, row=0)
+    async def r50(self, i, b): await self._roll(i, 50, "x50")
+    @discord.ui.button(label="Về Farm", emoji="↩️", style=discord.ButtonStyle.secondary, row=1)
+    async def back(self, i, b):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=build_farm_embed(player_data[self.user_id]), view=FarmView(self.user_id))
+    async def _roll(self, i, count, cost_key):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        p = player_data[self.user_id]
+        cost = GACHA_COST[cost_key]
+        if p["coin"] < cost:
+            await i.response.send_message(f"❌ Cần `{cost:,}` Coin!", ephemeral=True); return
+        p["coin"] -= cost
+        results = []
+        for _ in range(count):
+            f = roll_fruit(p.get("current_sea", 1))
+            if f: results.append(f)
+        new = give_fruits_to_player(p, results)
+        em = build_gacha_result_embed(results, p, new, is_multi=(count > 1))
+        await i.response.edit_message(embed=em, view=GachaView(self.user_id))
+
+# ══════════════════════════════════════════════════════════════════
+# 👹 RAID VIEW
+# ══════════════════════════════════════════════════════════════════
+class RaidView(discord.ui.View):
+    def __init__(self, user_id, page=0):
+        super().__init__(timeout=180)
+        self.user_id = user_id; self.page = page
+        p = player_data[user_id]
+        all_b = list(RAID_BOSSES.items())
+        per = 3; total = (len(all_b) + per - 1) // per
+        for i, (k, boss) in enumerate(all_b[page*per:(page+1)*per]):
+            locked = p["level"] < boss["level_req"]
+            rem, ok = check_raid_cooldown(p, k)
+            if locked:
+                lbl = f"{boss['name']} 🔒"; style = discord.ButtonStyle.secondary; dis = True
+            elif not ok:
+                lbl = f"{boss['name']} ({format_time(rem)})"; style = discord.ButtonStyle.secondary; dis = True
+            else:
+                lbl = boss["name"]; style = discord.ButtonStyle.danger; dis = False
+            btn = discord.ui.Button(label=lbl, emoji=boss["emoji"], style=style,
+                custom_id=f"raid_{k}", row=0, disabled=dis)
+            btn.callback = self._pick(k); self.add_item(btn)
+        prev = discord.ui.Button(label="◀", emoji="⬅️", style=discord.ButtonStyle.secondary, row=1, disabled=page==0)
+        prev.callback = self._prev; self.add_item(prev)
+        nxt = discord.ui.Button(label="▶", emoji="➡️", style=discord.ButtonStyle.secondary, row=1, disabled=page>=total-1)
+        nxt.callback = self._next; self.add_item(nxt)
+        back = discord.ui.Button(label="Về Farm", emoji="↩️", style=discord.ButtonStyle.secondary, row=1)
+        back.callback = self._back; self.add_item(back)
+    def _pick(self, bk):
+        async def cb(i):
+            if i.user.id != self.user_id:
+                await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+            p = player_data[self.user_id]
+            rem, ok = check_raid_cooldown(p, bk)
+            if not ok:
+                await i.response.send_message(f"⏳ Chờ `{format_time(rem)}`!", ephemeral=True); return
+            res = simulate_raid(p, bk)
+            boss = RAID_BOSSES[bk]
+            em = discord.Embed(
+                title=f"{boss['emoji']} {boss['name']} {'🏆' if res['win'] else '💀'}",
+                description=(f"❤️ HP: `{res['boss_hp']:,}`\n💥 Dmg: `{res['damage']:,}`\n\n" +
+                    (f"💎 +`{res['fragment']:,}`\n💰 +`{res['coin']:,}`\n⭐ +`{res['xp']:,}`" if res['win'] else "❌ Thất bại!")),
+                color=0x2ECC71 if res['win'] else 0xE74C3C)
+            await i.response.edit_message(embed=em, view=RaidView(self.user_id))
+        return cb
+    async def _prev(self, i):
+        if i.user.id != self.user_id: return
+        await i.response.edit_message(embed=build_raid_menu_embed(player_data[self.user_id]),
+            view=RaidView(self.user_id, self.page - 1))
+    async def _next(self, i):
+        if i.user.id != self.user_id: return
+        await i.response.edit_message(embed=build_raid_menu_embed(player_data[self.user_id]),
+            view=RaidView(self.user_id, self.page + 1))
+    async def _back(self, i):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=build_farm_embed(player_data[self.user_id]), view=FarmView(self.user_id))
+
+# ══════════════════════════════════════════════════════════════════
+# 💰 BOUNTY VIEW
+# ══════════════════════════════════════════════════════════════════
+def build_bounty_embed(user, player):
+    b = player.get("bounty", 0)
+    r = get_bounty_rank(b)
+    hist = player.get("bounty_history", [])[-5:]
+    hl = []
+    for h in reversed(hist):
+        sign = "+" if h["amount"] >= 0 else ""
+        hl.append(f"`{sign}{format_number(h['amount'])}` — *{h['reason']}*")
+    if not hl: hl = ["*Chưa có hoạt động*"]
+    return discord.Embed(
+        title=f"💰 Truy Nã • {user.display_name}",
+        description=(f"{r['emoji']} **{r['name']}**\n\n"
+                     f"💰 `{format_bounty(b)}`\n"
+                     f"📊 Lv.`{player['level']}`\n"
+                     f"⚔️ PvP: `{player.get('pvp_wins',0)}W/{player.get('pvp_losses',0)}L`\n\n"
+                     "**📜 Gần đây:**\n" + "\n".join(hl) + "\n\u200b"),
+        color=r["color"])
+
+class BountyView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+    @discord.ui.button(label="BXH Bounty", emoji="🏆", style=discord.ButtonStyle.primary)
+    async def lb(self, i, b):
+        ranked = sorted(player_data.items(), key=lambda x: x[1].get("bounty", 0), reverse=True)[:10]
+        medals = ["🥇", "🥈", "🥉"]
+        lines = []
+        for idx, (uid, p) in enumerate(ranked, 1):
+            u = bot.get_user(uid); n = u.display_name if u else f"User {uid}"
+            bb = p.get("bounty", 0); rr = get_bounty_rank(bb)
+            m = medals[idx-1] if idx <= 3 else f"`{idx}.`"
+            lines.append(f"{m} **{n}** {rr['emoji']} — `{format_bounty(bb)}`")
+        await i.response.send_message(embed=discord.Embed(title="🏆 BXH Bounty",
+            description="\n".join(lines), color=0xFFD700), ephemeral=True)
+    @discord.ui.button(label="Về Farm", emoji="↩️", style=discord.ButtonStyle.secondary)
+    async def back(self, i, b):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=build_farm_embed(player_data[self.user_id]), view=FarmView(self.user_id))
+
+# ══════════════════════════════════════════════════════════════════
+# ⚔️ PVP VIEW
+# ══════════════════════════════════════════════════════════════════
+def build_battle_invite_embed(inviter, target):
+    ip = player_data.get(inviter.id); tp = player_data.get(target.id)
+    if not ip or not tp: return discord.Embed(title="❌ Lỗi", color=0xE74C3C)
+    return discord.Embed(
+        title="⚔️ Lời Mời PvP",
+        description=(f"**{inviter.display_name}** thách đấu!\n\n"
+                     f"👤 **Đối thủ:** Lv.`{ip['level']}`\n"
+                     f"📊 **Bạn:** Lv.`{tp['level']}`\n\n"
+                     "⏱️ Hết hạn 60 giây."),
+        color=0xE74C3C)
+
+class PvPInviteView(discord.ui.View):
+    def __init__(self, inviter_id, target_id):
+        super().__init__(timeout=60)
+        self.inviter_id = inviter_id; self.target_id = target_id
+    @discord.ui.button(label="Chấp Nhận", emoji="✅", style=discord.ButtonStyle.success)
+    async def acc(self, i, b):
+        if i.user.id != self.target_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=discord.Embed(title="✅ Đã chấp nhận",
+            description="Trận PvP sẽ sớm được bắt đầu!", color=0x2ECC71), view=None)
+    @discord.ui.button(label="Từ Chối", emoji="❌", style=discord.ButtonStyle.danger)
+    async def dec(self, i, b):
+        if i.user.id != self.target_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        for c in self.children: c.disabled = True
+        await i.response.edit_message(embed=discord.Embed(title="❌ Từ chối",
+            description=f"{i.user.display_name} đã từ chối.", color=0x95A5A6), view=self)
+
+# ══════════════════════════════════════════════════════════════════
+# 🎯 BATTLE BOUNTY VIEW
+# ══════════════════════════════════════════════════════════════════
+def build_battle_bounty_embed(player, user):
+    b = player.get("bounty", 0)
+    r = get_bounty_rank(b)
+    return discord.Embed(
+        title="🎯 Battle Bounty",
+        description=(f"**Bounty:** {r['emoji']} `{format_bounty(b)}`\n\n"
+                     "**📜 Luật:**\n"
+                     f"• Bounty tối thiểu: `{format_bounty(BATTLE_CONFIG['min_bounty'])}`\n"
+                     f"• Cướp `{int(BATTLE_CONFIG['bounty_steal_pct']*100)}%` khi thắng\n"
+                     f"• Mất `{int(BATTLE_CONFIG['bounty_steal_pct']*100)}%` khi thua\n\n"
+                     "💡 Dùng `/pvp @user` để thách đấu."),
+        color=0xE74C3C)
+
+class BattleBountyView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+    @discord.ui.button(label="DS Top Bounty", emoji="🏆", style=discord.ButtonStyle.primary)
+    async def top(self, i, b):
+        ranked = sorted(player_data.items(), key=lambda x: x[1].get("bounty", 0), reverse=True)[:10]
+        lines = []
+        for idx, (uid, p) in enumerate(ranked, 1):
+            u = bot.get_user(uid); n = u.display_name if u else f"User {uid}"
+            bb = p.get("bounty", 0); rr = get_bounty_rank(bb)
+            m = ["🥇","🥈","🥉"][idx-1] if idx <= 3 else f"`{idx}.`"
+            lines.append(f"{m} **{n}** {rr['emoji']} — `{format_bounty(bb)}` • Lv.`{p['level']}`")
+        await i.response.send_message(embed=discord.Embed(title="💰 Top Bounty",
+            description="\n".join(lines), color=0xFFD700), ephemeral=True)
+    @discord.ui.button(label="Lịch Sử", emoji="📜", style=discord.ButtonStyle.secondary)
+    async def hist(self, i, b):
+        p = player_data[self.user_id]
+        await i.response.send_message(embed=discord.Embed(title="📜 Lịch Sử Battle",
+            description=f"🏆 Thắng: `{p.get('battle_wins',0)}`\n💀 Thua: `{p.get('battle_losses',0)}`\n"
+                        f"💰 Cướp: `{format_bounty(p.get('bounty_stolen',0))}`\n"
+                        f"🔻 Mất: `{format_bounty(p.get('bounty_lost',0))}`",
+            color=0x9B59B6), ephemeral=True)
+    @discord.ui.button(label="Về Farm", emoji="↩️", style=discord.ButtonStyle.secondary)
+    async def back(self, i, b):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=build_farm_embed(player_data[self.user_id]), view=FarmView(self.user_id))
+
+# ══════════════════════════════════════════════════════════════════
+# 🛒 SELL VIEW
+# ══════════════════════════════════════════════════════════════════
+class SellView(discord.ui.View):
+    def __init__(self, guild_id):
+        super().__init__(timeout=None)
+        self.guild_id = guild_id
+        config = sell_config.get(guild_id, {})
+        for key in config.get("fruits", [])[:5]:
+            item = SHOP_DATA["fruits"].get(key)
+            if not item: continue
+            btn = discord.ui.Button(label=item["name"][:15], emoji=item["emoji"],
+                style=discord.ButtonStyle.success, custom_id=f"sell_{guild_id}_{key}", row=0)
+            btn.callback = self._buy(key)
+            self.add_item(btn)
+    def _buy(self, fk):
+        async def cb(i):
+            if i.user.id not in player_data:
+                await i.response.send_message("❌ Chưa tham gia! Dùng `/onepiece`", ephemeral=True); return
+            p = player_data[i.user.id]
+            item = SHOP_DATA["fruits"][fk]
+            price = int(item["price"] * 1.5)
+            if p["coin"] < price:
+                await i.response.send_message(f"❌ Cần `{format_number(price)}` Coin!", ephemeral=True); return
+            if fk in p["inventory"]["fruits"]:
+                await i.response.send_message(f"⚠️ Đã có **{item['name']}**!", ephemeral=True); return
+            p["coin"] -= price
+            p["inventory"]["fruits"].append(fk)
+            p["equipped_fruit"] = fk
+            await i.response.send_message(f"✅ Mua **{item['emoji']} {item['name']}**! (-`{format_number(price)}`)", ephemeral=True)
+        return cb
+
+# ══════════════════════════════════════════════════════════════════
+# 👑 RACE VIEW
+# ══════════════════════════════════════════════════════════════════
+def build_race_embed(player):
+    rk = player.get("race", "human")
+    race = RACES.get(rk, RACES["human"])
+    rl = player.get("race_level", 1)
+    if rl >= 4:
+        bonuses = get_race_v4_bonus(rk)
+        title = f"👑 {race['name']} V4"
+        color = 0xFFD700
+    else:
+        bonuses = race["v1"]["bonus"]
+        title = f"{race['emoji']} {race['name']} V{rl}"
+        color = race["color"]
+    bl = [f"• +{v} {k.title()}" for k, v in bonuses.items()]
+    v4 = ""
+    if rl < 4:
+        v4 = (f"\n**🌟 Nâng V4:**\n"
+              f"💰 `{format_number(RACE_V4_COST['coin'])}`\n"
+              f"💎 `{format_number(RACE_V4_COST['fragments'])}`\n"
+              f"🎯 `{RACE_V4_COST['race_fragments']}` Race Frag\n")
+    else:
+        v4 = "\n✅ **Đã V4 — cấp cao nhất!**\n"
+    return discord.Embed(
+        title="👑 Hệ Thống Tộc",
+        description=(f"{title}\n\n**Bonus:**\n" + "\n".join(bl) + f"\n{v4}\n"
+                     f"💰 `{format_number(player['coin'])}`\n"
+                     f"💎 `{format_number(player.get('fragments',0))}`\n"
+                     f"🎯 `{player.get('race_fragments',0)}`\n\u200b"),
+        color=color)
+
+class RaceView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+    @discord.ui.button(label="Đổi Tộc (1M)", emoji="🔄", style=discord.ButtonStyle.primary)
+    async def change(self, i, b):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        await i.response.edit_message(embed=build_race_change_embed(), view=RaceChangeView(self.user_id))
+    @discord.ui.button(label="Nâng V4", emoji="👑", style=discord.ButtonStyle.danger)
+    async def v4(self, i, b):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        p = player_data[self.user_id]
+        if p.get("race_level", 1) >= 4:
+            await i.response.send_message("✅ Đã V4!", ephemeral=True); return
+        missing = []
+        if p["coin"] < RACE_V4_COST["coin"]:
+            missing.append(f"💰 thiếu `{format_number(RACE_V4_COST['coin']-p['coin'])}`")
+        if p.get("fragments", 0) < RACE_V4_COST["fragments"]:
+            missing.append(f"💎 thiếu `{format_number(RACE_V4_COST['fragments']-p.get('fragments',0))}`")
+        if p.get("race_fragments", 0) < RACE_V4_COST["race_fragments"]:
+            missing.append(f"🎯 thiếu `{RACE_V4_COST['race_fragments']-p.get('race_fragments',0)}`")
+        if missing:
+            await i.response.send_message("❌ Thiếu:\n" + "\n".join(missing), ephemeral=True); return
+        p["coin"] -= RACE_V4_COST["coin"]
+        p["fragments"] -= RACE_V4_COST["fragments"]
+        p["race_fragments"] -= RACE_V4_COST["race_fragments"]
+        p["race_level"] = 4
+        recalc_stats(p)
+        rk = p.get("race", "human")
+        bonuses = get_race_v4_bonus(rk)
+        em = discord.Embed(title="👑 NÂNG V4 THÀNH CÔNG!",
+            description=("**Bonus mới:**\n" + "\n".join(f"• **+{v}** {k.title()}" for k, v in bonuses.items()) +
+                         "\n\n⚡ Sức mạnh tăng vọt!"), color=0xFFD700)
+        await i.response.edit_message(embed=em, view=RaceView(self.user_id))
+    @discord.ui.button(label="Về Profile", emoji="↩️", style=discord.ButtonStyle.secondary)
+    async def back(self, i, b):
+        if i.user.id != self.user_id:
+            await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        u = bot.get_user(self.user_id)
+        await i.response.edit_message(embed=build_profile_embed(player_data[self.user_id], u),
+            view=ProfileView(self.user_id))
+
+def build_race_change_embed():
+    lines = []
+    for k, r in RACES.items():
+        b = ", ".join(f"+{v} {sk.title()}" for sk, v in r["v1"]["bonus"].items())
+        lines.append(f"{r['emoji']} **{r['name']}** — {b}")
+    return discord.Embed(title="🔄 Chọn Tộc",
+        description="\n".join(lines) + "\n\n⚠️ Đổi tộc tốn `1,000,000` Coin!\n\u200b", color=0x9B59B6)
+
+class RaceChangeView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+        for idx, (k, r) in enumerate(RACES.items()):
+            btn = discord.ui.Button(label=r["name"], emoji=r["emoji"],
+                style=discord.ButtonStyle.primary, custom_id=f"rc_{k}", row=idx // 3)
+            btn.callback = self._pick(k); self.add_item(btn)
+        back = discord.ui.Button(label="Quay Lại", emoji="↩️", style=discord.ButtonStyle.secondary, row=2)
+        back.callback = self._back; self.add_item(back)
+    def _pick(self, rk):
+        async def cb(i):
+            if i.user.id != self.user_id:
+                await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+            p = player_data[self.user_id]
+            if p["coin"] < 1_000_000:
+                await i.response.send_message("❌ Cần `1,000,000` Coin!", ephemeral=True); return
+            if p.get("race") == rk:
+                await i.response.send_message("⚠️ Đang ở tộc này!", ephemeral=True); return
+            p["coin"] -= 1_000_000
+            p["race"] = rk
+            p["race_level"] = 1
+            recalc_stats(p)
+            race = RACES[rk]
+            await i.response.edit_message(embed=discord.Embed(title="✅ Đổi Tộc!",
+                description=f"Trở thành {race['emoji']} **{race['name']}**!\n\n" +
+                            "\n".join(f"• +{v} {sk.title()}" for sk, v in race["v1"]["bonus"].items()),
+                color=race["color"]), view=RaceView(self.user_id))
+        return cb
+    async def _back(self, i):
+        if i.user.id != self.user_id: return
+        await i.response.edit_message(embed=build_race_embed(player_data[self.user_id]), view=RaceView(self.user_id))
+        # ══════════════════════════════════════════════════════════════════
+# 🏆 LEADERBOARD EMBEDS
+# ══════════════════════════════════════════════════════════════════
+def build_leaderboard_embed(guild):
+    top = get_top_players(10)
+    if not top:
+        return discord.Embed(title="🏆 BXH", description="*Chưa có ai!*", color=0xFFD700)
+
+    medals = ["🥇", "🥈", "🥉"]
+    top3 = []
+    for i in range(min(3, len(top))):
+        uid, p, sc = top[i]
+        u = bot.get_user(uid)
+        n = u.display_name if u else f"User {uid}"
+        t = get_player_title(p)
+        ts = f" {TITLES[t]['emoji']} *{TITLES[t]['name']}*" if t else ""
+        top3.append(f"{medals[i]} **{n}**{ts}\n   ⚡ `{format_number(sc)}` • Lv.`{p['level']}`")
+
+    rest = []
+    for i in range(3, len(top)):
+        uid, p, sc = top[i]
+        u = bot.get_user(uid)
+        n = u.display_name if u else f"User {uid}"
+        rest.append(f"`{i+1}.` **{n}** — ⚡ `{format_number(sc)}` • Lv.`{p['level']}`")
+
+    desc = "**🌟 TOP 3:**\n\n" + "\n\n".join(top3)
+    if rest:
+        desc += "\n\n**📋 Tiếp theo:**\n" + "\n".join(rest)
+    desc += f"\n\n━━━━━━━━━━━━━━━\n👥 `{len(player_data)}` người • 🔄 60s"
+
+    embed = discord.Embed(title="🏆 BXH • NGƯỜI MẠNH NHẤT", description=desc,
+        color=0xFFD700, timestamp=discord.utils.utcnow())
+    if top:
+        tu = bot.get_user(top[0][0])
+        if tu: embed.set_thumbnail(url=tu.display_avatar.url)
+    embed.set_footer(text="⚡ Power = Stats + Level + Awaken + PvP")
+    return embed
+
+def build_bounty_leaderboard_embed(guild):
+    ranked = sorted(player_data.items(), key=lambda x: x[1].get("bounty", 0), reverse=True)[:10]
+    if not ranked:
+        return discord.Embed(title="💰 BXH Truy Nã", description="*Chưa có ai!*", color=0xFFD700)
+
+    medals = ["🥇", "🥈", "🥉"]
+    lines = []
+    for i, (uid, p) in enumerate(ranked):
+        u = bot.get_user(uid); n = u.display_name if u else f"User {uid}"
+        b = p.get("bounty", 0); r = get_bounty_rank(b)
+        m = medals[i] if i < 3 else f"`{i+1}.`"
+        if i < 3:
+            lines.append(f"{m} **{n}** {r['emoji']}\n   💰 `{format_bounty(b)}` • Lv.`{p['level']}`")
+        else:
+            lines.append(f"{m} **{n}** — 💰 `{format_bounty(b)}`")
+
+    embed = discord.Embed(title="💰 BXH • TRUY NÃ",
+        description="\n\n".join(lines) + f"\n\n━━━━━━━━━━━━━━━\n👥 `{len(player_data)}` • 🔄 60s",
+        color=0xFFD700, timestamp=discord.utils.utcnow())
+    if ranked:
+        tu = bot.get_user(ranked[0][0])
+        if tu: embed.set_thumbnail(url=tu.display_avatar.url)
+    return embed
+
+# ══════════════════════════════════════════════════════════════════
+# 🔄 TASKS
+# ══════════════════════════════════════════════════════════════════
+@tasks.loop(seconds=60)
+async def update_leaderboards():
+    for guild_id, config in list(leaderboard_config.items()):
+        if guild_id == "bounty_channels": continue
+        try:
+            guild = bot.get_guild(int(guild_id))
+            if not guild: continue
+            ch = guild.get_channel(config["channel_id"])
+            if not ch:
+                del leaderboard_config[guild_id]; save_leaderboard_config(); continue
+            try:
+                msg = await ch.fetch_message(config["message_id"])
+            except discord.NotFound:
+                nm = await ch.send(embed=build_leaderboard_embed(guild))
+                leaderboard_config[guild_id]["message_id"] = nm.id
+                save_leaderboard_config(); continue
+            ne = build_leaderboard_embed(guild)
+            if not msg.embeds or msg.embeds[0].description != ne.description:
+                await msg.edit(embed=ne)
+        except Exception as e:
+            print(f"[LB] {guild_id}: {e}")
+
+    bc = leaderboard_config.get("bounty_channels", {})
+    for guild_id, config in list(bc.items()):
+        try:
+            guild = bot.get_guild(int(guild_id))
+            if not guild: continue
+            ch = guild.get_channel(config["channel_id"])
+            if not ch: continue
+            try:
+                msg = await ch.fetch_message(config["message_id"])
+                ne = build_bounty_leaderboard_embed(guild)
+                if not msg.embeds or msg.embeds[0].description != ne.description:
+                    await msg.edit(embed=ne)
+            except: pass
+        except Exception as e:
+            print(f"[Bounty LB] {guild_id}: {e}")
+
+@tasks.loop(seconds=60)
+async def auto_refresh_sell():
+    for guild_id, config in list(sell_config.items()):
+        try:
+            if time.time() - config["last_refresh"] >= SELL_REFRESH_SECONDS:
+                refresh_sell_fruits(guild_id)
+                guild = bot.get_guild(int(guild_id))
+                if not guild: continue
+                ch = guild.get_channel(config["channel_id"])
+                if not ch: continue
+                try:
+                    msg = await ch.fetch_message(config["message_id"])
+                    await msg.edit(embed=build_sell_embed(guild_id), view=SellView(guild_id))
+                except: pass
+        except Exception as e:
+            print(f"[Sell] {guild_id}: {e}")
+
+@update_leaderboards.before_loop
+async def before_lb(): await bot.wait_until_ready()
+
+@auto_refresh_sell.before_loop
+async def before_sell(): await bot.wait_until_ready()
+
+# ══════════════════════════════════════════════════════════════════
+# 📖 COMMANDS
+# ══════════════════════════════════════════════════════════════════
+@bot.tree.command(name="onepiece", description="🏴‍☠️ Setup bảng Start One Piece vào kênh hiện tại")
+@app_commands.checks.has_permissions(manage_guild=True)
+async def cmd_onepiece(interaction: discord.Interaction):
+    if interaction.guild is None:
+        await interaction.response.send_message("❌ Lệnh này chỉ dùng trong server!", ephemeral=True)
+        return
+    me = interaction.guild.me
+    if me is None or not interaction.channel.permissions_for(me).send_messages:
+        await interaction.response.send_message("❌ Bot không có quyền gửi tin nhắn trong kênh này!", ephemeral=True)
+        return
+    try:
+        await get_or_create_public_game_channels(interaction.guild)
+    except discord.Forbidden:
+        await interaction.response.send_message(
+            "❌ Bot thiếu quyền **Quản lý kênh (Manage Channels)** để tạo kênh Trade/PvP.",
+            ephemeral=True,
+        )
+        return
+    except Exception as e:
+        print(f"[Public game channels] {e}")
+        await interaction.response.send_message(
+            "❌ Không thể tạo kênh Trade/PvP. Hãy kiểm tra quyền của bot.",
+            ephemeral=True,
+        )
+        return
+
+    await interaction.response.send_message(
+        embed=build_main_embed(),
+        view=JoinGameView()
+    )
+
+@bot.tree.command(name="profile", description="👤 Xem hồ sơ")
+@app_commands.describe(user="Người chơi (mặc định: bạn)")
+async def cmd_profile(interaction: discord.Interaction, user: discord.Member = None):
+    target = user or interaction.user
+    if target.id not in player_data:
+        await interaction.response.send_message(f"❌ **{target.display_name}** chưa tham gia!", ephemeral=True); return
+    p = player_data[target.id]
+    em = build_profile_embed(p, target)
+    if target.id == interaction.user.id:
+        await interaction.response.send_message(embed=em, view=ProfileView(target.id))
+    else:
+        await interaction.response.send_message(embed=em)
+
+@bot.tree.command(name="bounty", description="💰 Xem truy nã")
+@app_commands.describe(user="Người chơi (mặc định: bạn)")
+async def cmd_bounty(interaction: discord.Interaction, user: discord.Member = None):
+    target = user or interaction.user
+    if target.id not in player_data:
+        await interaction.response.send_message(f"❌ **{target.display_name}** chưa tham gia!", ephemeral=True); return
+    p = player_data[target.id]
+    em = build_bounty_embed(target, p)
+    if target.id == interaction.user.id:
+        await interaction.response.send_message(embed=em, view=BountyView(target.id))
+    else:
+        await interaction.response.send_message(embed=em)
+
+@bot.tree.command(name="pvp", description="⚔️ Thách đấu PvP")
+@app_commands.describe(opponent="Người chơi muốn thách đấu")
+async def cmd_pvp(interaction: discord.Interaction, opponent: discord.Member):
+    inv, tgt = interaction.user, opponent
+    if inv.id == tgt.id:
+        await interaction.response.send_message("❌ Không tự đánh mình!", ephemeral=True); return
+    if tgt.bot:
+        await interaction.response.send_message("❌ Không đánh bot!", ephemeral=True); return
+    if inv.id not in player_data:
+        await interaction.response.send_message("❌ Bạn chưa tham gia!", ephemeral=True); return
+    if tgt.id not in player_data:
+        await interaction.response.send_message(f"❌ **{tgt.display_name}** chưa tham gia!", ephemeral=True); return
+    if inv.id in user_in_battle:
+        await interaction.response.send_message("❌ Bạn đang bận!", ephemeral=True); return
+    if tgt.id in user_in_battle:
+        await interaction.response.send_message(f"❌ **{tgt.display_name}** đang bận!", ephemeral=True); return
+    await interaction.response.send_message(
+        content=f"📩 Lời mời PvP tới {tgt.mention}!",
+        embed=build_battle_invite_embed(inv, tgt),
+        view=PvPInviteView(inv.id, tgt.id)
+    )
+
+@bot.tree.command(name="battle", description="🎯 Battle Bounty — Đấu trường truy nã")
+async def cmd_battle(interaction: discord.Interaction):
+    if interaction.user.id not in player_data:
+        await interaction.response.send_message("❌ Chưa tham gia! Dùng `/onepiece`", ephemeral=True); return
+    p = player_data[interaction.user.id]
+    await interaction.response.send_message(
+        embed=build_battle_bounty_embed(p, interaction.user),
+        view=BattleBountyView(interaction.user.id)
+    )
+
+@bot.tree.command(name="raid", description="👹 Menu Raid Boss")
+async def cmd_raid(interaction: discord.Interaction):
+    if interaction.user.id not in player_data:
+        await interaction.response.send_message("❌ Chưa tham gia!", ephemeral=True); return
+    await interaction.response.send_message(
+        embed=build_raid_menu_embed(player_data[interaction.user.id]),
+        view=RaidView(interaction.user.id), ephemeral=True
+    )
+
+@bot.tree.command(name="xephang", description="🏆 Setup BXH Power")
+@app_commands.describe(channel="Kênh BXH")
+@app_commands.checks.has_permissions(manage_guild=True)
+async def cmd_xephang(interaction: discord.Interaction, channel: discord.TextChannel = None):
+    ch = channel or interaction.channel
+    gid = str(interaction.guild_id)
+    if not ch.permissions_for(interaction.guild.me).send_messages:
+        await interaction.response.send_message("❌ Bot không có quyền!", ephemeral=True); return
+    old = leaderboard_config.get(gid)
+    if old and gid != "bounty_channels":
+        try:
+            oc = interaction.guild.get_channel(old["channel_id"])
+            if oc:
+                om = await oc.fetch_message(old["message_id"]); await om.delete()
+        except: pass
+    await interaction.response.defer()
+    msg = await ch.send(embed=build_leaderboard_embed(interaction.guild))
+    leaderboard_config[gid] = {"channel_id": ch.id, "message_id": msg.id}
+    save_leaderboard_config()
+    await interaction.followup.send(f"✅ Setup BXH Power tại {ch.mention}!", ephemeral=True)
+
+@bot.tree.command(name="xephang-bounty", description="💰 Setup BXH Truy Nã")
+@app_commands.describe(channel="Kênh BXH")
+@app_commands.checks.has_permissions(manage_guild=True)
+async def cmd_xephang_bounty(interaction: discord.Interaction, channel: discord.TextChannel = None):
+    ch = channel or interaction.channel
+    gid = str(interaction.guild_id)
+    bc = leaderboard_config.get("bounty_channels", {})
+    if gid in bc:
+        try:
+            oc = interaction.guild.get_channel(bc[gid]["channel_id"])
+            if oc:
+                om = await oc.fetch_message(bc[gid]["message_id"]); await om.delete()
+        except: pass
+    await interaction.response.defer()
+    msg = await ch.send(embed=build_bounty_leaderboard_embed(interaction.guild))
+    if "bounty_channels" not in leaderboard_config:
+        leaderboard_config["bounty_channels"] = {}
+    leaderboard_config["bounty_channels"][gid] = {"channel_id": ch.id, "message_id": msg.id}
+    save_leaderboard_config()
+    await interaction.followup.send(f"✅ Setup BXH Bounty tại {ch.mention}!", ephemeral=True)
+
+@bot.tree.command(name="xephang-off", description="❌ Tắt tất cả BXH")
+@app_commands.checks.has_permissions(manage_guild=True)
+async def cmd_xephang_off(interaction: discord.Interaction):
+    gid = str(interaction.guild_id)
+    removed = []
+    if gid in leaderboard_config and gid != "bounty_channels":
+        cfg = leaderboard_config[gid]
+        try:
+            oc = interaction.guild.get_channel(cfg["channel_id"])
+            if oc:
+                try:
+                    om = await oc.fetch_message(cfg["message_id"]); await om.delete()
+                except: pass
+        except: pass
+        del leaderboard_config[gid]
+        removed.append("⚡ Power")
+    bc = leaderboard_config.get("bounty_channels", {})
+    if gid in bc:
+        try:
+            oc = interaction.guild.get_channel(bc[gid]["channel_id"])
+            if oc:
+                try:
+                    om = await oc.fetch_message(bc[gid]["message_id"]); await om.delete()
+                except: pass
+        except: pass
+        del bc[gid]
+        removed.append("💰 Bounty")
+    save_leaderboard_config()
+    if removed:
+        await interaction.response.send_message("✅ Đã tắt:\n" + "\n".join(f"• {r}" for r in removed), ephemeral=True)
+    else:
+        await interaction.response.send_message("⚠️ Chưa setup!", ephemeral=True)
+
+@bot.tree.command(name="sell", description="🛒 Setup shop trái tự động")
+@app_commands.describe(action="setup/refresh", channel="Kênh shop")
+@app_commands.choices(action=[
+    app_commands.Choice(name="setup", value="setup"),
+    app_commands.Choice(name="refresh", value="refresh"),
+])
+@app_commands.checks.has_permissions(manage_guild=True)
+async def cmd_sell(interaction: discord.Interaction, action: app_commands.Choice[str], channel: discord.TextChannel = None):
+    gid = str(interaction.guild_id)
+    ch = channel or interaction.channel
+    if action.value == "setup":
+        if not ch.permissions_for(interaction.guild.me).send_messages:
+            await interaction.response.send_message("❌ Bot không có quyền!", ephemeral=True); return
+        old = sell_config.get(gid)
+        if old:
+            try:
+                oc = interaction.guild.get_channel(old["channel_id"])
+                if oc:
+                    om = await oc.fetch_message(old["message_id"]); await om.delete()
+            except: pass
+        fruits = roll_random_fruits(5, 3)
+        sell_config[gid] = {"channel_id": ch.id, "message_id": 0, "fruits": fruits, "last_refresh": time.time()}
+        await interaction.response.defer()
+        msg = await ch.send(embed=build_sell_embed(gid), view=SellView(gid))
+        sell_config[gid]["message_id"] = msg.id
+        save_sell_config()
+        await interaction.followup.send(f"✅ Setup shop trái tại {ch.mention}!", ephemeral=True)
+    elif action.value == "refresh":
+        if gid not in sell_config:
+            await interaction.response.send_message("⚠️ Chưa setup!", ephemeral=True); return
+        refresh_sell_fruits(gid)
+        try:
+            cfg = sell_config[gid]
+            c = interaction.guild.get_channel(cfg["channel_id"])
+            if c:
+                m = await c.fetch_message(cfg["message_id"])
+                await m.edit(embed=build_sell_embed(gid), view=SellView(gid))
+        except: pass
+        await interaction.response.send_message("✅ Đã refresh!", ephemeral=True)
+
+@bot.tree.command(name="help", description="📖 Danh sách lệnh")
+async def cmd_help(interaction: discord.Interaction):
+    em = discord.Embed(title="📖 Danh Sách Lệnh", description=(
+        "**🎮 Người chơi:**\n"
+        "`/onepiece` — Setup bảng Start One Piece\n"
+        "`/profile [@user]` — Hồ sơ\n"
+        "`/bounty [@user]` — Truy nã\n"
+        "`/pvp @user` — PvP\n"
+        "`/battle` — Battle Bounty\n"
+        "`/raid` — Raid Boss\n\n"
+        "**⚙️ Admin:**\n"
+        "`/xephang [ch]` — BXH Power\n"
+        "`/xephang-bounty [ch]` — BXH Bounty\n"
+        "`/xephang-off` — Tắt BXH\n"
+        "`/sell setup` — Shop trái\n"
+        "`/sell refresh` — Refresh shop"), color=0xFFD700)
+    await interaction.response.send_message(embed=em, ephemeral=True)
+
+# ══════════════════════════════════════════════════════════════════
+# 🚀 READY + RUN
+# ══════════════════════════════════════════════════════════════════
+
 @bot.event
 async def on_ready():
     if not getattr(bot, "_merged_commands_synced", False):
@@ -2623,6 +5154,14 @@ async def on_ready():
             print(f"[BOT] Lỗi đồng bộ slash command: {e}")
 
     print(f"[BOT] Đã đăng nhập: {bot.user}")
+    try:
+        if not update_leaderboards.is_running():
+            update_leaderboards.start()
+        if not auto_refresh_sell.is_running():
+            auto_refresh_sell.start()
+        print("[ONE PIECE] Background tasks started")
+    except Exception as e:
+        print(f"[ONE PIECE] Không thể khởi động background tasks: {e}")
 
 # ===== KHOI DONG BOT TREN RAILWAY =====
 # Dat token Discord trong Railway Variables voi ten: DISCORD_TOKEN

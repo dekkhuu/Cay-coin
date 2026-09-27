@@ -3852,8 +3852,8 @@ def build_main_embed():
         title="🏴‍☠️ One Piece • BirthdayTime",
         description=(
             "Bấm **Tham Gia Game** để bắt đầu.\n\n"
-            "🍎 **Shop Trái Ác Quỷ:** xem tại kênh riêng của Shop. "
-            "<a:shopping:1553606684037881866> Shop đổi ngẫu nhiên trái mới sau mỗi **1 giờ**.\n"
+            "\n🍎 **Shop Trái Ác Quỷ:** xem tại kênh riêng của Shop. "
+            "\n<a:shopping:1553606684037881866> Shop đổi ngẫu nhiên trái mới sau mỗi **1 giờ**.\n"
         ),
         color=0xFFD700
     )

@@ -5223,14 +5223,14 @@ def build_leaderboard_embed(guild):
         n = u.display_name if u else f"User {uid}"
         t = get_player_title(p)
         ts = f" {TITLES[t]['emoji']} *{TITLES[t]['name']}*" if t else ""
-        top3.append(f"{medals[i]} **{n}**{ts}\n   ⚡ `{format_number(sc)}` • Lv.`{p['level']}`")
+        top3.append(f"{medals[i]} **{n}**{ts}\n   Lv.`{p['level']}`")
 
     rest = []
     for i in range(3, len(top)):
         uid, p, sc = top[i]
         u = bot.get_user(uid)
         n = u.display_name if u else f"User {uid}"
-        rest.append(f"`{i+1}.` **{n}** — ⚡ `{format_number(sc)}` • Lv.`{p['level']}`")
+        rest.append(f"`{i+1}.` **{n}** — Lv.`{p['level']}`")
 
     desc = "**🌟 TOP 3:**\n\n" + "\n\n".join(top3)
     if rest:
@@ -5242,7 +5242,7 @@ def build_leaderboard_embed(guild):
     if top:
         tu = bot.get_user(top[0][0])
         if tu: embed.set_thumbnail(url=tu.display_avatar.url)
-    embed.set_footer(text="⚡ Power = Stats + Level + Awaken")
+
     return embed
 
 def build_bounty_leaderboard_embed(guild):

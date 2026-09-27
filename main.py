@@ -161,9 +161,6 @@ def stop_voice_keepalive(guild_id: int):
 
 afk_users = {}
 
-user_birthdays = {}
-
-server_congrats_channels = {}
 
 server_boost_channels = {}
 
@@ -172,6 +169,7 @@ server_stats_channels = {}
 WELCOME_CONFIG = {'channel_id': None, 'message': 'Chào mừng {name} đã gia nhập **{server}**!\n\n**Chào con vk:** {member}\n**Con vk là thành viên:** `{number}`\nNhững người hỗ trợ:<@1315601796424794173>,<@1073202800965713961>,<@1502755916334760169> & <@1466395005487812620>\nDev Web: <@999253748616548362>\nDev Bot: <@1548490039158251531>', 'gif_path': 'welcome_gif.gif'}
 
 BOOST_CONFIG = {'channel_id': None, 'message': 'Cảm ơn {member} đã Boost máy chủ **{server}** để giúp server ngày càng phát triển hơn! 🚀💎', 'gif_path': 'boost_gif.gif'}
+
 
 LEVEL_ROLE_MILESTONES = [1, 25, 50, 100, 200]
 
@@ -260,23 +258,6 @@ def make_embed(*args, **kwargs):
     add_standard_footer(embed)
     return embed
 
-class BirthdayModal(discord.ui.Modal, title='<a:happybirthday:1548593066158465044> Đăng ký Ngày Sinh Nhật'):
-    dob_input = discord.ui.TextInput(label='Ngày sinh (DD/MM/YYYY)', placeholder='25/12/2004', required=True, max_length=15)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        user_birthdays[interaction.user.id] = self.dob_input.value.strip()
-        await interaction.response.send_message('<a:verify:1548178353859596320> Đã lưu ngày sinh thành công!', ephemeral=True)
-
-class BirthdayView(discord.ui.View):
-
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @discord.ui.button(label='🎉 Nhập ngày sinh', style=discord.ButtonStyle.primary, custom_id='setup_birthday_btn')
-    async def birthday_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(BirthdayModal())
-
-
 class AnnouncementModal(discord.ui.Modal, title='TAO THONG BAO PRO'):
     title_input = discord.ui.TextInput(label='Tiêu đề thông báo', placeholder='Ví dụ: 📢 Thông báo sự kiện mới', required=True, max_length=256)
     content_input = discord.ui.TextInput(label='Nội dung thông báo', placeholder='Nhập nội dung cần gửi... Có thể dùng @everyone hoặc @here nếu cần.', style=discord.TextStyle.paragraph, required=True, max_length=4000)
@@ -341,26 +322,6 @@ def is_admin_or_special(interaction: discord.Interaction) -> bool:
     return interaction.user.guild_permissions.administrator or interaction.user.id == SPECIAL_ADMIN_ID
 
 
-
-@tasks.loop(hours=24)
-async def check_birthdays():
-    now = datetime.datetime.now()
-    today_str = now.strftime('%d/%m')
-    for guild in bot.guilds:
-        if guild.id not in server_congrats_channels:
-            continue
-        channel = guild.get_channel(server_congrats_channels[guild.id])
-        if not channel:
-            continue
-        for user_id, dob_str in user_birthdays.items():
-            if dob_str.startswith(today_str):
-                member = guild.get_member(user_id)
-                if member:
-                    embed = make_embed(title='<a:chcmng:1547243888639615097> CHÚC MỪNG SINH NHẬT! <a:birthday:1548993737915367424>', description=f' {member} Đã thêm tuổi mới nha! Chúc mem càng ngày tốt đẹp trong công việc và việc học nha! 🥳', color=discord.Color.pink())
-                    if os.path.exists(BIRTHDAY_GIF_PATH):
-                        await channel.send(embed=embed, file=discord.File(BIRTHDAY_GIF_PATH, filename='hb_gif.gif'))
-                    else:
-                        await channel.send(embed=embed)
 
 MASOI_ROLE_INFO = {'Dân Làng': ('<:lang:1547587120825372752> Phe Dân Làng', 'Không có kỹ năng đặc biệt.'), 'Tiên Tri': ('<:lang:1547587120825372752> Phe Dân Làng', 'Mỗi đêm soi 1 người để biết có phải Ma Sói hay không.'), 'Bảo Vệ': ('<:lang:1547587120825372752> Phe Dân Làng', 'Mỗi đêm bảo vệ 1 người khỏi Ma Sói.'), 'Thợ Săn': ('<:lang:1547587120825372752> Phe Dân Làng', 'Vai đặc biệt của phe Dân.'), 'Cupid': ('<:lang:1547587120825372752> Phe Dân Làng', 'Ghép 2 người thành cặp tình yêu.'), 'Sói Thường': ('<:werewolf:1547564934299390082> Phe Ma Sói', 'Cùng phe Sói chọn người để cắn mỗi đêm.'), 'Sói Alpha': ('<:werewolf:1547564934299390082> Phe Ma Sói', 'Sói đặc biệt.'), 'Sói Con': ('<:werewolf:1547564934299390082> Phe Ma Sói', 'Sói đặc biệt, có cơ chế riêng khi bị loại.'), 'Sói Sát Thủ': ('<:werewolf:1547564934299390082> Phe Ma Sói', 'Sói đặc biệt có khả năng hạ mục tiêu.')}
 
@@ -3892,7 +3853,7 @@ def build_main_embed():
         description=(
             "Bấm **Tham Gia Game** để bắt đầu.\n\n"
             "🍎 **Shop Trái Ác Quỷ:** xem tại kênh riêng của Shop. "
-            "<a\:shopping:1553606684037881866> Shop đổi ngẫu nhiên trái mới sau mỗi **1 giờ**.\n"
+            "<a:shopping:1553606684037881866> Shop đổi ngẫu nhiên trái mới sau mỗi **1 giờ**.\n"
         ),
         color=0xFFD700
     )
@@ -5500,28 +5461,14 @@ async def update_leaderboards():
         except Exception as e:
             print(f"[Bounty LB] {guild_id}: {e}")
 
-@tasks.loop(seconds=60)
-async def auto_refresh_sell():
-    for guild_id, config in list(sell_config.items()):
-        try:
-            if time.time() - config["last_refresh"] >= SELL_REFRESH_SECONDS:
-                refresh_sell_fruits(guild_id)
-                guild = bot.get_guild(int(guild_id))
-                if not guild: continue
-                ch = guild.get_channel(config["channel_id"])
-                if not ch: continue
-                try:
-                    msg = await ch.fetch_message(config["message_id"])
-                    await msg.edit(embed=build_sell_embed(guild_id), view=SellView(guild_id))
-                except: pass
-        except Exception as e:
-            print(f"[Sell] {guild_id}: {e}")
-
 @update_leaderboards.before_loop
-async def before_lb(): await bot.wait_until_ready()
+async def before_lb():
+    await bot.wait_until_ready()
 
-@auto_refresh_sell.before_loop
-async def before_sell(): await bot.wait_until_ready()
+# Hệ thống SELL cũ không còn được khởi động. Shop công khai hiện dùng
+# refresh_onepiece_shop_channel() và build_hourly_dealer_embed().
+# Giữ SellView/sell_config bên trên để tương thích dữ liệu cũ, nhưng không
+# chạy task cũ vì nó tham chiếu các hàm đã bị loại bỏ trong phiên bản hiện tại.
 
 # ══════════════════════════════════════════════════════════════════
 # 🍎 ONE PIECE SHOP CHANNEL

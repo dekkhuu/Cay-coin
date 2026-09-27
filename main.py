@@ -3891,9 +3891,8 @@ def build_main_embed():
         title="🏴‍☠️ One Piece • BirthdayTime",
         description=(
             "Bấm **Tham Gia Game** để bắt đầu.\n\n"
-            "**🎮 Chức năng:** Profile • Bounty • Battle • Raid • BXH\n\n"
-            "🍎 **Shop Trái Ác Quỷ:** xem tại kênh riêng của Shop.\n"
-            "💡 Shop đổi ngẫu nhiên trái mới sau mỗi **1 giờ**.\n\u200b"
+            "🍎 **Shop Trái Ác Quỷ:** xem tại kênh riêng của Shop. "
+            "<a\:shopping:1553606684037881866> Shop đổi ngẫu nhiên trái mới sau mỗi **1 giờ**.\n"
         ),
         color=0xFFD700
     )
@@ -4106,7 +4105,7 @@ class ChooseFactionView(discord.ui.View):
         super().__init__(timeout=120)
         self.main_view = main_view
 
-    @discord.ui.button(label="Hải Tặc", emoji="<a:Pirates:1553667127095857183>", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Hải Tặc", emoji="<a:Pirates:1553609978709938217>", style=discord.ButtonStyle.danger)
     async def pirate(self, i, b): await self._pick(i, "<a:5130shivermetimbers:1553605985690456094> Hải Tặc")
 
     @discord.ui.button(label="Hải Quân", emoji="<a:Marines:1553609770332717056>", style=discord.ButtonStyle.primary)

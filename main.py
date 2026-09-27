@@ -2790,12 +2790,71 @@ SELL_CONFIG_FILE = "sell_config.json"
 
 # Dùng chung bot instance đã khai báo ở đầu file.
 # Không tạo bot instance thứ hai, nếu không các lệnh cũ sẽ bị mất khỏi tree.
-SKILLS = {
-    "trái": [{"name": "Gomu Pistol", "xp_req": 0, "damage": 15},
-             {"name": "Gomu Bazooka", "xp_req": 15, "damage": 25},
-             {"name": "Gear Second", "xp_req": 40, "damage": 45},
-             {"name": "Gear Fourth", "xp_req": 80, "damage": 75}],
+SKILL_XP = [0, 15, 40, 80, 140]
+
+# Mỗi Trái Ác Quỷ có bộ chiêu riêng: M1, Z, X, C, V.
+# Đây là tên/DMG riêng cho hệ thống game của bot; không dùng chung Gomu cho mọi trái.
+FRUIT_SKILLS = {
+    "rocket": ["Rocket Punch", "Rocket Rush", "Rocket Barrage", "Rocket Crash", "Rocket Overdrive"],
+    "spin": ["Spin Slash", "Tornado Spin", "Whirlwind", "Spin Crusher", "Cyclone Assault"],
+    "chop": ["Blade Slash", "Blade Storm", "Flying Blades", "Cross Cutter", "Blade Tempest"],
+    "spring": ["Spring Kick", "Spring Leap", "Spring Cannon", "Spring Crash", "Spring Barrage"],
+    "boom": ["Bomb Jab", "Bomb Shot", "Cluster Bomb", "Bomb Rush", "Mega Explosion"],
+    "smoke": ["Smoke Jab", "Smoke Bullet", "Smoke Cloud", "White Bind", "Smoke Inferno"],
+    "spike": ["Spike Strike", "Spike Rush", "Spike Barrage", "Spike Prison", "Spike Storm"],
+    "flame": ["Flame Jab", "Fire Bullet", "Fire Fist", "Flame Flight", "Hellfire Burst"],
+    "ice": ["Ice Jab", "Ice Spears", "Ice Bird", "Ice Age", "Absolute Zero"],
+    "sand": ["Sand Strike", "Desert Sword", "Sand Coffin", "Sandstorm", "Desert Cataclysm"],
+    "dark": ["Dark Jab", "Dark Rocks", "Black Spiral", "Dark Bomb", "Dark Dimension"],
+    "eagle": ["Eagle Talon", "Wind Feather", "Sky Dive", "Wing Storm", "Eagle Tempest"],
+    "diamond": ["Diamond Fist", "Diamond Body", "Diamond Rush", "Diamond Crash", "Diamond Fortress"],
+    "light": ["Light Jab", "Light Beam", "Light Barrage", "Light Kick", "Judgment Ray"],
+    "rubber": ["Rubber Punch", "Rubber Bazooka", "Rubber Gatling", "Red Hawk", "Gear Fifth"],
+    "ghost": ["Ghost Jab", "Ghost Bullet", "Phantom Rush", "Soul Reaper", "Haunting Night"],
+    "magma": ["Magma Jab", "Magma Fist", "Magma Rain", "Volcanic Assault", "Meteor Volcano"],
+    "quake": ["Quake Jab", "Quake Punch", "Seaquake", "Rupture", "World Breaker"],
+    "buddha": ["Golden Fist", "Buddha Shock", "Palm Blast", "Golden Slam", "Thousand Hands"],
+    "love": ["Love Jab", "Heart Shot", "Cupid Arrow", "Love Storm", "Heartbreak"],
+    "creation": ["Creation Jab", "Create Blade", "Create Wall", "Creation Burst", "World Creation"],
+    "spider": ["Spider Jab", "Spider Web", "Spider Dash", "Overheat", "Spider Dominion"],
+    "sound": ["Sound Jab", "Sound Wave", "Resonance", "Echo Storm", "Ultimate Concert"],
+    "phoenix": ["Phoenix Talon", "Flame Feather", "Regeneration", "Phoenix Dive", "Blue Flame Rebirth"],
+    "portal": ["Portal Jab", "Portal Dash", "Dimensional Rift", "World Warp", "Dimensional Collapse"],
+    "lingtning": ["Thunder Jab", "Lightning Spear", "Thunder Storm", "Thunder Bird", "Thunder God"],
+    "pain": ["Pain Jab", "Pain Beam", "Pain Burst", "Pain Repulse", "Pain Dominion"],
+    "blizzard": ["Frost Jab", "Blizzard Arrow", "Snowball", "Whiteout", "Absolute Blizzard"],
+    "gravity": ["Gravity Jab", "Gravity Push", "Gravity Orb", "Meteor Strike", "Planetary Crush"],
+    "mammoth": ["Mammoth Stomp", "Trample", "Elephant Rush", "Mammoth Roar", "Ancient Stampede"],
+    "t-rex": ["Rex Bite", "Tail Smash", "Predator Rush", "Roaring Fury", "T-Rex Rampage"],
+    "dough": ["Dough Punch", "Dough Fist", "Dough Roll", "Baked Barrage", "Dough Awakening"],
+    "shadow": ["Shadow Jab", "Shadow Blade", "Corvus Torment", "Umbrage", "Nightmare Reign"],
+    "venom": ["Venom Jab", "Venom Shot", "Venom Fang", "Venom Web", "Venom Demon"],
+    "gas": ["Gas Jab", "Gas Cloud", "Toxic Shot", "Gas Prison", "Gas Apocalypse"],
+    "spirit": ["Spirit Jab", "Spirit Beam", "Spirit Wolf", "Spirit Roulette", "Spirit King"],
+    "tiger": ["Tiger Claw", "Tiger Dash", "Beast Roar", "Tiger Pounce", "White Tiger Fury"],
+    "yeti": ["Yeti Claw", "Ice Roar", "Yeti Rush", "Frozen Smash", "Yeti Avalanche"],
+    "magnet": ["Magnet Jab", "Magnetic Pull", "Iron Crush", "Magnetic Storm", "Magnet Overload"],
+    "kitsune": ["Fox Claw", "Fox Fire", "Fox Illusion", "Nine Tails", "Kitsune Mode"],
+    "control": ["Room Jab", "Gamma Knife", "Takt", "Room Slash", "Gamma Overload"],
+    "dragon_east": ["Dragon Claw", "Dragon Breath", "Dragon Cannon", "Dragon Rush", "Dragon King"],
+    "dragon_west": ["Azure Claw", "Azure Breath", "Western Dragon Cannon", "Sky Dragon Rush", "Western Dragon King"],
 }
+
+# Base damage tăng dần theo cấp chiêu. Mỗi trái vẫn có tên chiêu riêng.
+# Được chọn theo equipped_fruit trong simulate_fight/build_fight_embed.
+def get_fruit_skills(fruit_key):
+    names = FRUIT_SKILLS.get(fruit_key)
+    if not names:
+        names = ["Basic Fruit Hit", "Fruit Strike", "Fruit Burst", "Fruit Storm", "Fruit Ultimate"]
+    base = max(15, 15 + list(FRUIT_SKILLS).index(fruit_key) * 2) if fruit_key in FRUIT_SKILLS else 15
+    return [
+        {"name": name, "xp_req": SKILL_XP[i], "damage": base + i * 20}
+        for i, name in enumerate(names)
+    ]
+
+# Tương thích với các phần cũ còn gọi SKILLS["trái"].
+SKILLS = {"trái": get_fruit_skills("rocket")}
+
 
 WEAPON_EMOJI = {"trái": "🍎"}
 STAT_INFO = {
@@ -3695,7 +3754,12 @@ def add_bounty(player, amount, reason="", cap=10_000_000_000):
 # ══════════════════════════════════════════════════════════════════
 def simulate_fight(player, sea, island_key, weapon, skill_index=0):
     island = SEA_DATA[sea]["islands"][island_key]
-    skill = SKILLS[weapon][skill_index]
+    equipped = player.get("equipped_fruit") if weapon == "trái" else None
+    skill_list = get_fruit_skills(equipped) if equipped else SKILLS.get(weapon, [])
+    if not skill_list:
+        skill_list = SKILLS.get(weapon, [])
+    skill_index = max(0, min(skill_index, len(skill_list) - 1))
+    skill = skill_list[skill_index]
     monster = random.choice(island["monsters"])
 
     stat_dmg = get_stat_damage(player, weapon)
@@ -3808,7 +3872,7 @@ def build_onepiece_help_embed():
             "**Các chức năng trong bảng /onepiece:**\n\n"
             "👤 **Profile** — Xem hồ sơ nhân vật\n"
             "💰 **Bounty** — Xem truy nã và BXH bounty\n"
-            "⚔️ **PvP** — Thách đấu người chơi khác\n"
+
             "🎯 **Battle** — Xem Battle Bounty\n"
             "👹 **Raid** — Đánh boss raid\n"
             "🏆 **BXH** — Xem bảng xếp hạng\n"
@@ -3827,7 +3891,7 @@ def build_main_embed():
         title="🏴‍☠️ One Piece • BirthdayTime",
         description=(
             "Bấm **Tham Gia Game** để bắt đầu.\n\n"
-            "**🎮 Chức năng:** Profile • Bounty • PvP • Battle • Raid • BXH\n\n"
+            "**🎮 Chức năng:** Profile • Bounty • Battle • Raid • BXH\n\n"
             "🍎 **Shop Trái Ác Quỷ:** xem tại kênh riêng của Shop.\n"
             "💡 Shop đổi ngẫu nhiên trái mới sau mỗi **1 giờ**.\n\u200b"
         ),
@@ -4042,8 +4106,8 @@ class ChooseFactionView(discord.ui.View):
         super().__init__(timeout=120)
         self.main_view = main_view
 
-    @discord.ui.button(label="Hải Tặc", emoji="🏴‍☠️", style=discord.ButtonStyle.danger)
-    async def pirate(self, i, b): await self._pick(i, "🏴‍☠️ Hải Tặc")
+    @discord.ui.button(label="Hải Tặc", emoji="<a:5130shivermetimbers:1553605985690456094>", style=discord.ButtonStyle.danger)
+    async def pirate(self, i, b): await self._pick(i, "<a:5130shivermetimbers:1553605985690456094> Hải Tặc")
 
     @discord.ui.button(label="Hải Quân", emoji="⚓", style=discord.ButtonStyle.primary)
     async def marine(self, i, b): await self._pick(i, "⚓ Hải Quân")
@@ -4293,10 +4357,6 @@ def build_profile_embed(player, user):
     filled = int(15 * pct / 100) if need_xp > 0 else 15
     bar = "█" * filled + "░" * (15 - filled)
 
-    pvp_w = player.get("pvp_wins", 0)
-    pvp_l = player.get("pvp_losses", 0)
-    tot = pvp_w + pvp_l
-    wr = (pvp_w / tot * 100) if tot > 0 else 0
     pt_h = int(player.get("playtime", 0) // 3600)
     pt_m = int((player.get("playtime", 0) % 3600) // 60)
 
@@ -4319,7 +4379,6 @@ def build_profile_embed(player, user):
         color=rank["color"]
     )
     embed.add_field(name="💰 Tài Sản", value=f"💰 `{format_number(player['coin'])}`\n💎 `{format_number(player.get('fragments',0))}`", inline=True)
-    embed.add_field(name="⚔️ PvP", value=f"🏆 `{pvp_w}`\n💀 `{pvp_l}`\n📊 `{wr:.1f}%`", inline=True)
     embed.add_field(name="📈 Khác", value=f"👹 `{player.get('bosses_killed',0)}`\n💀 `{player.get('total_kills',0):,}`", inline=True)
     if player.get("bio"):
         embed.add_field(name="📝 Tiểu sử", value=f"*{player['bio']}*", inline=False)
@@ -4534,8 +4593,11 @@ class IslandQuestView(discord.ui.View):
     async def start(self, i, b):
         if i.user.id != self.user_id:
             await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
-        await i.response.edit_message(embed=build_weapon_choose_embed(),
-            view=WeaponChooseView(self.user_id, self.sea, self.island_key))
+        # Bỏ bước chọn vũ khí/trái; mặc định chiến đấu bằng Trái Ác Quỷ
+        await i.response.edit_message(
+            embed=build_fight_embed(player_data[self.user_id], "trái"),
+            view=FightView(self.user_id, self.sea, self.island_key, "trái")
+        )
     @discord.ui.button(label="Đánh Boss", emoji="👹", style=discord.ButtonStyle.success)
     async def boss(self, i, b):
         if i.user.id != self.user_id:
@@ -4573,14 +4635,20 @@ class WeaponChooseView(discord.ui.View):
 
 def build_fight_embed(player, weapon):
     mastery = player["mastery"].get(weapon, 0)
+    fruit_key = player.get("equipped_fruit") if weapon == "trái" else None
+    fruit = SHOP_DATA["fruits"].get(fruit_key, {}) if fruit_key else {}
+    skills = get_fruit_skills(fruit_key) if fruit_key else SKILLS.get(weapon, [])
+    skill_keys = ["M1", "Z", "X", "C", "V"]
     skill_lines = []
-    for idx, sk in enumerate(SKILLS.get(weapon, []), 1):
-        skill_lines.append(f"**{idx}. {sk['name']}** — {sk['damage']} DMG • cần {sk['xp_req']} XP")
+    for idx, sk in enumerate(skills):
+        key = skill_keys[idx] if idx < len(skill_keys) else str(idx + 1)
+        skill_lines.append(f"**{key} — {sk['name']}** — {sk['damage']} DMG • cần {sk['xp_req']} XP")
+    fruit_line = f"\n🍎 **Trái:** {fruit.get('emoji','')} **{fruit.get('name', fruit_key or 'Không có')}**" if weapon == "trái" else ""
     return discord.Embed(
         title=f"{WEAPON_EMOJI[weapon]} Chiến Đấu • {weapon.upper()}",
         description=(
-            f"🔧 Thông thạo: `{mastery}`\n⭐ XP: `{player['xp']}`\n\n"
-            "✨ **Tên chiêu:**\n" + "\n".join(skill_lines) + "\n\nChọn chiêu!\n\u200b"
+            f"🔧 Thông thạo: `{mastery}`\n⭐ XP: `{player['xp']}`{fruit_line}\n\n"
+            "✨ **Bộ chiêu riêng:**\n" + "\n".join(skill_lines) + "\n\nChọn chiêu để tấn công!\n\u200b"
         ),
         color=0x9B59B6
     )
@@ -4589,8 +4657,15 @@ class FightView(discord.ui.View):
     def __init__(self, user_id, sea, island_key, weapon):
         super().__init__(timeout=120)
         self.user_id = user_id; self.sea = sea; self.island_key = island_key; self.weapon = weapon
-        for i, sk in enumerate(SKILLS[weapon]):
-            btn = discord.ui.Button(label=sk["name"][:80], emoji="✨", style=discord.ButtonStyle.primary, row=0)
+        fruit_key = player_data[user_id].get("equipped_fruit") if weapon == "trái" else None
+        self.skills = get_fruit_skills(fruit_key) if fruit_key else SKILLS.get(weapon, [])
+        skill_keys = ["M1", "Z", "X", "C", "V"]
+        for i, sk in enumerate(self.skills):
+            key = skill_keys[i] if i < len(skill_keys) else str(i + 1)
+            # Tên nút lấy trực tiếp từ bộ chiêu của trái đang trang bị.
+            # Hiển thị cả phím tắt để người chơi biết M1/Z/X/C/V.
+            label = f"{key} • {sk['name']}"[:80]
+            btn = discord.ui.Button(label=label, emoji="✨", style=discord.ButtonStyle.primary, row=0)
             btn.callback = self._atk(i); self.add_item(btn)
         back = discord.ui.Button(label="Quay Lại", emoji="↩️", style=discord.ButtonStyle.secondary, row=1)
         back.callback = self._back; self.add_item(back)
@@ -4605,7 +4680,7 @@ class FightView(discord.ui.View):
             p["last_fight"] = now
             res = simulate_fight(p, self.sea, self.island_key, self.weapon, idx)
             isl = SEA_DATA[self.sea]["islands"][self.island_key]
-            skill_name = SKILLS[self.weapon][idx]["name"] if idx < len(SKILLS.get(self.weapon, [])) else f"Chiêu {idx+1}"
+            skill_name = self.skills[idx]["name"] if idx < len(self.skills) else f"Chiêu {idx+1}"
             em = discord.Embed(
                 title=f"🏆 Thắng {res['monster']}!" if res['win'] else f"💀 Thua {res['monster']}!",
                 description=(
@@ -4620,8 +4695,10 @@ class FightView(discord.ui.View):
     async def _back(self, i):
         if i.user.id != self.user_id:
             await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
-        await i.response.edit_message(embed=build_weapon_choose_embed(),
-            view=WeaponChooseView(self.user_id, self.sea, self.island_key))
+        await i.response.edit_message(
+            embed=build_island_quest_embed(player_data[self.user_id], self.sea, self.island_key),
+            view=IslandQuestView(self.user_id, self.sea, self.island_key)
+        )
 
 class QuestCompleteView(discord.ui.View):
     def __init__(self, user_id, sea, island_key):
@@ -4881,7 +4958,6 @@ def build_bounty_embed(user, player):
         description=(f"{r['emoji']} **{r['name']}**\n\n"
                      f"💰 `{format_bounty(b)}`\n"
                      f"📊 Lv.`{player['level']}`\n"
-                     f"⚔️ PvP: `{player.get('pvp_wins',0)}W/{player.get('pvp_losses',0)}L`\n\n"
                      "**📜 Gần đây:**\n" + "\n".join(hl) + "\n\u200b"),
         color=r["color"])
 
@@ -5167,7 +5243,7 @@ def build_leaderboard_embed(guild):
     if top:
         tu = bot.get_user(top[0][0])
         if tu: embed.set_thumbnail(url=tu.display_avatar.url)
-    embed.set_footer(text="⚡ Power = Stats + Level + Awaken + PvP")
+    embed.set_footer(text="⚡ Power = Stats + Level + Awaken")
     return embed
 
 def build_bounty_leaderboard_embed(guild):
@@ -5195,6 +5271,64 @@ def build_bounty_leaderboard_embed(guild):
     return embed
 
 # ══════════════════════════════════════════════════════════════════
+# 🏆 RIÊNG KÊNH BXH TOP 10
+# ══════════════════════════════════════════════════════════════════
+LEADERBOARD_CHANNEL_NAME = "🏆・bxh"
+
+async def ensure_leaderboard_channel(guild):
+    """Tạo/tìm kênh BXH riêng và tạo 1 embed Top 10 duy nhất để bot cập nhật."""
+    if guild is None:
+        return None
+
+    gid = str(guild.id)
+    config = leaderboard_config.get(gid)
+
+    # Ưu tiên kênh đã lưu trong config.
+    channel = None
+    if config:
+        channel = guild.get_channel(config.get("channel_id"))
+
+    # Nếu chưa có, tìm theo tên.
+    if channel is None:
+        channel = discord.utils.get(guild.text_channels, name=LEADERBOARD_CHANNEL_NAME)
+
+    # Nếu chưa có thì tạo mới.
+    if channel is None:
+        try:
+            channel = await guild.create_text_channel(
+                LEADERBOARD_CHANNEL_NAME,
+                topic="🏆 BXH Top 10 người chơi — tự động cập nhật mỗi 60 giây"
+            )
+        except discord.Forbidden:
+            print(f"[LB] Không có quyền tạo kênh BXH ở guild {guild.id}")
+            return None
+        except Exception as e:
+            print(f"[LB] Lỗi tạo kênh BXH {guild.id}: {type(e).__name__}: {e}")
+            return None
+
+    # Lấy message BXH đã lưu; nếu không còn thì tạo mới.
+    message = None
+    if config and config.get("message_id"):
+        try:
+            message = await channel.fetch_message(config["message_id"])
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+            message = None
+
+    if message is None:
+        try:
+            message = await channel.send(embed=build_leaderboard_embed(guild))
+        except Exception as e:
+            print(f"[LB] Không gửi được embed BXH {guild.id}: {type(e).__name__}: {e}")
+            return None
+
+    leaderboard_config[gid] = {
+        "channel_id": channel.id,
+        "message_id": message.id,
+    }
+    save_leaderboard_config()
+    return channel
+
+# ══════════════════════════════════════════════════════════════════
 # 🔄 TASKS
 # ══════════════════════════════════════════════════════════════════
 @tasks.loop(seconds=60)
@@ -5213,9 +5347,10 @@ async def update_leaderboards():
                 nm = await ch.send(embed=build_leaderboard_embed(guild))
                 leaderboard_config[guild_id]["message_id"] = nm.id
                 save_leaderboard_config(); continue
+            # Mỗi 60 giây luôn dựng lại và thay embed BXH, kể cả khi
+            # nội dung chưa thay đổi. Timestamp sẽ được cập nhật theo mỗi vòng.
             ne = build_leaderboard_embed(guild)
-            if not msg.embeds or msg.embeds[0].description != ne.description:
-                await msg.edit(embed=ne)
+            await msg.edit(embed=ne)
         except Exception as e:
             print(f"[LB] {guild_id}: {e}")
 
@@ -5267,7 +5402,7 @@ class PublicShopView(discord.ui.View):
 
     @discord.ui.button(
         label="Mua Trái Ác Quỷ",
-        emoji="🛒",
+        emoji="<a:shopping:1553606684037881866>",
         style=discord.ButtonStyle.success,
         custom_id="onepiece_public_shop_buy",
     )
@@ -5276,7 +5411,7 @@ class PublicShopView(discord.ui.View):
             player = player_data.get(interaction.user.id)
             if not player:
                 await interaction.response.send_message(
-                    "❌ Bạn chưa tham gia One Piece. Hãy bấm **Tham Gia Game** rồi chọn phe trước.",
+                    "<a:failed:1548973085741547580> Bạn chưa tham gia One Piece. Hãy bấm **Tham Gia Game** rồi chọn phe trước.",
                     ephemeral=True,
                 )
                 return
@@ -5371,7 +5506,7 @@ async def before_refresh_onepiece_shop_channel():
 
 # ══════════════════════════════════════════════════════════════════
 
-@bot.tree.command(name="onepiece", description="🏴‍☠️ Mở bảng điều khiển One Piece")
+@bot.tree.command(name="onepiece", description="<a:Pirateflag:1553607350810583042> Mở bảng điều khiển One Piece")
 async def cmd_onepiece(interaction: discord.Interaction):
     try:
         await ensure_onepiece_shop_channel(interaction.guild)
@@ -5415,6 +5550,21 @@ async def on_ready():
         print(f"[BOT] LỖI SYNC SLASH COMMAND: {type(e).__name__}: {e}")
 
     print(f"[BOT] Đã đăng nhập: {bot.user}")
+
+    # Tạo kênh BXH riêng + embed Top 10 cho server.
+    try:
+        guild = bot.get_guild(ALLOWED_GUILD_ID)
+        if guild:
+            await ensure_leaderboard_channel(guild)
+    except Exception as e:
+        print(f"[LB] Lỗi khởi tạo kênh BXH: {type(e).__name__}: {e}")
+
+    try:
+        if not update_leaderboards.is_running():
+            update_leaderboards.start()
+    except RuntimeError:
+        pass
+
     try:
         if not refresh_onepiece_shop_channel.is_running():
             refresh_onepiece_shop_channel.start()

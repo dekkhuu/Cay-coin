@@ -4017,7 +4017,7 @@ class OnePieceHubView(discord.ui.View):
     async def join(self, interaction, button):
         if interaction.user.id in player_data:
             p = normalize_player_loadout(player_data[interaction.user.id])
-            faction = p.get("faction", "🏴‍☠️ Hải Tặc")
+            faction = p.get("faction", "<a:Pirates:1553609978709938217> Hải Tặc")
             await interaction.response.send_message(embed=build_game_embed(faction), view=GameMenuView(faction, interaction.user.id), ephemeral=True)
             return
         await interaction.response.send_message(embed=build_faction_embed(), view=ChooseFactionView(self), ephemeral=True)
@@ -4045,7 +4045,7 @@ class JoinGameView(discord.ui.View):
         # Nếu người chơi đã tham gia, mở lại bảng game thay vì báo lỗi.
         if interaction.user.id in player_data:
             player = normalize_player_loadout(player_data[interaction.user.id])
-            faction = player.get("faction", "🏴‍☠️ Hải Tặc")
+            faction = player.get("faction", "<a:Pirates:1553609978709938217> Hải Tặc")
             self.players[interaction.user.id] = {"user": interaction.user, "faction": faction}
             await interaction.response.send_message(
                 embed=build_game_embed(faction),
@@ -4106,11 +4106,11 @@ class ChooseFactionView(discord.ui.View):
         super().__init__(timeout=120)
         self.main_view = main_view
 
-    @discord.ui.button(label="Hải Tặc", emoji="<a:5130shivermetimbers:1553605985690456094>", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Hải Tặc", emoji="<a:Pirates:1553609978709938217>", style=discord.ButtonStyle.danger)
     async def pirate(self, i, b): await self._pick(i, "<a:5130shivermetimbers:1553605985690456094> Hải Tặc")
 
-    @discord.ui.button(label="Hải Quân", emoji="⚓", style=discord.ButtonStyle.primary)
-    async def marine(self, i, b): await self._pick(i, "⚓ Hải Quân")
+    @discord.ui.button(label="Hải Quân", emoji="<a:Marines:1553609770332717056>", style=discord.ButtonStyle.primary)
+    async def marine(self, i, b): await self._pick(i, "<a:Marines:1553609770332717056> Hải Quân")
 
     async def _pick(self, interaction, faction):
         user = interaction.user
@@ -4437,7 +4437,7 @@ class ShopView(discord.ui.View):
     async def _back(self,i):
         if i.user.id!=self.user_id: return
         p=player_data[self.user_id]
-        await i.response.edit_message(embed=build_game_embed(p.get("faction","🏴‍☠️ Hải Tặc")),view=GameMenuView(p.get("faction","🏴‍☠️ Hải Tặc"),self.user_id))
+        await i.response.edit_message(embed=build_game_embed(p.get("faction","<a:Pirates:1553609978709938217> Hải Tặc")),view=GameMenuView(p.get("faction","<a:Pirates:1553609978709938217> Hải Tặc"),self.user_id))
 
 # ══════════════════════════════════════════════════════════════════
 # 🎒 INVENTORY VIEW

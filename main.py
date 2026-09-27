@@ -3904,11 +3904,13 @@ def build_faction_embed():
         color=0x1ABC9C
     )
 
-def build_game_embed(faction):
+def build_game_embed(faction, user_id=None):
     color = 0xE74C3C if "Hải Tặc" in faction else 0x3498DB
+    fragment = player_data.get(user_id, {}).get("fragments", 0) if user_id is not None else None
+    extra = f"\n\n💎 **Fragment:** `{fragment:,}`" if fragment is not None else ""
     return discord.Embed(
         title="🏴‍☠️ One Piece • BirthdayTime",
-        description=f"Chúc mừng bạn đã chọn phe **{faction}**!\n\n\u200b\n\u200b",
+        description=f"Chúc mừng bạn đã chọn phe **{faction}**!{extra}\n\n\u200b",
         color=color
     )
 
@@ -4017,7 +4019,7 @@ class OnePieceHubView(discord.ui.View):
         if interaction.user.id in player_data:
             p = normalize_player_loadout(player_data[interaction.user.id])
             faction = p.get("faction", "<a:Pirates:1553609978709938217> Hải Tặc")
-            await interaction.response.send_message(embed=build_game_embed(faction), view=GameMenuView(faction, interaction.user.id), ephemeral=True)
+            await interaction.response.send_message(embed=build_game_embed(faction, interaction.user.id), view=GameMenuView(faction, interaction.user.id), ephemeral=True)
             return
         await interaction.response.send_message(embed=build_faction_embed(), view=ChooseFactionView(self), ephemeral=True)
 
@@ -4047,7 +4049,7 @@ class JoinGameView(discord.ui.View):
             faction = player.get("faction", "<a:Pirates:1553609978709938217> Hải Tặc")
             self.players[interaction.user.id] = {"user": interaction.user, "faction": faction}
             await interaction.response.send_message(
-                embed=build_game_embed(faction),
+                embed=build_game_embed(faction, interaction.user.id),
                 view=GameMenuView(faction, interaction.user.id),
                 ephemeral=True
             )
@@ -4124,7 +4126,7 @@ class ChooseFactionView(discord.ui.View):
                 await interaction.response.send_message(f"❌ Không thể cấp role/quyền kênh phe: {e}", ephemeral=True)
                 return
             await interaction.response.edit_message(
-                embed=build_game_embed(faction),
+                embed=build_game_embed(faction, user.id),
                 view=GameMenuView(faction, user.id)
             )
             return
@@ -4148,7 +4150,7 @@ class ChooseFactionView(discord.ui.View):
             await interaction.response.edit_message(embed=free_embed, view=GameMenuView(faction, user.id))
         else:
             await interaction.response.edit_message(
-                embed=build_game_embed(faction),
+                embed=build_game_embed(faction, user.id),
                 view=GameMenuView(faction, user.id)
             )
 
@@ -4188,6 +4190,16 @@ class GameMenuView(discord.ui.View):
         await interaction.response.edit_message(
             embed=build_awakening_embed(player_data[self.user_id], interaction.user),
             view=AwakeningView(self.user_id)
+        )
+
+    @discord.ui.button(label="Raid", emoji="👹", style=discord.ButtonStyle.danger, row=1)
+    async def raid(self, interaction, button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
+        p = player_data[self.user_id]
+        await interaction.response.edit_message(
+            embed=build_raid_menu_embed(p, 0),
+            view=RaidView(self.user_id, 0)
         )
 
 # ══════════════════════════════════════════════════════════════════
@@ -4436,7 +4448,7 @@ class ShopView(discord.ui.View):
     async def _back(self,i):
         if i.user.id!=self.user_id: return
         p=player_data[self.user_id]
-        await i.response.edit_message(embed=build_game_embed(p.get("faction","<a:Pirates:1553609978709938217> Hải Tặc")),view=GameMenuView(p.get("faction","<a:Pirates:1553609978709938217> Hải Tặc"),self.user_id))
+        await i.response.edit_message(embed=build_game_embed(p.get("faction","<a:Pirates:1553609978709938217> Hải Tặc"), self.user_id),view=GameMenuView(p.get("faction","<a:Pirates:1553609978709938217> Hải Tặc"),self.user_id))
 
 # ══════════════════════════════════════════════════════════════════
 # 🎒 INVENTORY VIEW
@@ -4883,6 +4895,120 @@ class GachaView(discord.ui.View):
         await i.response.edit_message(embed=em, view=GachaView(self.user_id))
 
 # ══════════════════════════════════════════════════════════════════
+# 👹 RAID SYSTEM
+# ══════════════════════════════════════════════════════════════════
+def check_raid_cooldown(player, boss_key):
+    """Trả về (số giây còn lại, có thể đánh hay không)."""
+    cooldowns = player.setdefault("raid_cooldowns", {})
+    last = float(cooldowns.get(boss_key, 0) or 0)
+    cooldown = int(RAID_BOSSES[boss_key]["cooldown"])
+    remain = max(0, cooldown - (time.time() - last))
+    return remain, remain <= 0
+
+
+def build_raid_menu_embed(player, page=0):
+    all_bosses = list(RAID_BOSSES.items())
+    per_page = 3
+    total_pages = max(1, (len(all_bosses) + per_page - 1) // per_page)
+    page = max(0, min(int(page), total_pages - 1))
+    start = page * per_page
+    selected = all_bosses[start:start + per_page]
+
+    lines = []
+    for key, boss in selected:
+        level = int(player.get("level", 1))
+        if level < boss["level_req"]:
+            status = f"🔒 Lv.{boss['level_req']}+"
+        else:
+            rem, ok = check_raid_cooldown(player, key)
+            status = "✅ Sẵn sàng" if ok else f"⏳ {format_time(rem)}"
+        lines.append(
+            f"{boss['emoji']} **{boss['name']}** • Tier `{boss['tier']}`\n"
+            f"❤️ HP `{boss['hp']:,}` • ⚔️ Dmg `{boss['damage']:,}` • {status}"
+        )
+
+    return discord.Embed(
+        title="👹 RAID • One Piece",
+        description=(
+            "Đánh boss Raid để nhận **💎 Fragment + 💰 Coin + ⭐ XP**.\n\n"
+            + "\n".join(lines)
+            + f"\n\n📖 Trang `{page + 1}/{total_pages}` • Có `{len(RAID_BOSSES)}` boss"
+            + "\n💡 Boss càng mạnh → phần thưởng càng lớn."
+        ),
+        color=0xE67E22,
+    )
+
+
+def simulate_raid(player, boss_key):
+    """Đánh Raid solo bằng chỉ số Fruit/Defense/Level hiện tại."""
+    boss = RAID_BOSSES[boss_key]
+    now = time.time()
+    player.setdefault("raid_cooldowns", {})
+    player["raid_cooldowns"][boss_key] = now
+
+    level = max(1, int(player.get("level", 1)))
+    fruit_stat = int(player.get("stats", {}).get("fruit", 1))
+    defense_stat = int(player.get("stats", {}).get("defense", 1))
+    mastery = int(player.get("mastery", {}).get("trái", 0))
+    fruit_key = player.get("equipped_fruit")
+
+    # Sát thương theo Level/Fruit/Mastery, có thêm bonus Awakening.
+    # Mốc Level yêu cầu của từng boss giúp mở khóa dần thay vì đánh vượt cấp.
+    base_damage = 50 + level * 20 + fruit_stat * 10 + mastery * 1.5
+    base_damage *= get_fruit_damage_multiplier(player, fruit_key)
+    damage = max(1, int(base_damage * random.uniform(0.90, 1.10)))
+
+    boss_hp = int(boss["hp"])
+    turns = max(1, (boss_hp + damage - 1) // damage)
+
+    # Defense quyết định số lượt người chơi có thể trụ được.
+    # Level cao giúp đánh Raid cuối; Defense/Mastery/Awakening giúp ổn định tỉ lệ thắng.
+    max_turns = 8 + (level // 200) + (defense_stat // 5)
+    incoming = turns * int(boss["damage"])
+    taken = max(1, int(incoming / (1 + defense_stat / 100)))
+    win = turns <= max_turns
+
+    result = {
+        "win": win,
+        "boss": boss["name"],
+        "boss_hp": boss_hp,
+        "damage": damage * turns,
+        "damage_per_turn": damage,
+        "turns": turns,
+        "taken": taken,
+        "fragment": 0,
+        "coin": 0,
+        "xp": 0,
+        "stat_points_gained": 0,
+    }
+
+    if not win:
+        return result
+
+    fragment = random.randint(*boss["reward_fragment"])
+    coin = random.randint(*boss["reward_coin"])
+    xp = random.randint(*boss["reward_xp"])
+
+    player["fragments"] = player.get("fragments", 0) + fragment
+    player["coin"] = player.get("coin", 0) + coin
+    player["xp"] = player.get("xp", 0) + xp
+
+    new_level = min(MAX_LEVEL, calc_level(player["xp"]))
+    if new_level >= MAX_LEVEL:
+        player["xp"] = xp_to_level(MAX_LEVEL)
+        new_level = MAX_LEVEL
+    player["level"] = new_level
+    result["stat_points_gained"] = update_stat_points(player)
+
+    player["raids_cleared"] = player.get("raids_cleared", 0) + 1
+    player["bosses_killed"] = player.get("bosses_killed", 0) + 1
+    player["total_kills"] = player.get("total_kills", 0) + 1
+
+    result.update({"fragment": fragment, "coin": coin, "xp": xp})
+    return result
+
+
+# ══════════════════════════════════════════════════════════════════
 # 👹 RAID VIEW
 # ══════════════════════════════════════════════════════════════════
 class RaidView(discord.ui.View):
@@ -4908,7 +5034,7 @@ class RaidView(discord.ui.View):
         prev.callback = self._prev; self.add_item(prev)
         nxt = discord.ui.Button(label="▶", emoji="➡️", style=discord.ButtonStyle.secondary, row=1, disabled=page>=total-1)
         nxt.callback = self._next; self.add_item(nxt)
-        back = discord.ui.Button(label="Về Farm", emoji="↩️", style=discord.ButtonStyle.secondary, row=1)
+        back = discord.ui.Button(label="Về Menu", emoji="↩️", style=discord.ButtonStyle.secondary, row=1)
         back.callback = self._back; self.add_item(back)
     def _pick(self, bk):
         async def cb(i):
@@ -4922,23 +5048,28 @@ class RaidView(discord.ui.View):
             boss = RAID_BOSSES[bk]
             em = discord.Embed(
                 title=f"{boss['emoji']} {boss['name']} {'🏆' if res['win'] else '💀'}",
-                description=(f"❤️ HP: `{res['boss_hp']:,}`\n💥 Dmg: `{res['damage']:,}`\n\n" +
-                    (f"💎 +`{res['fragment']:,}`\n💰 +`{res['coin']:,}`\n⭐ +`{res['xp']:,}`" if res['win'] else "❌ Thất bại!")),
+                description=(f"❤️ Boss HP: `{res['boss_hp']:,}`\n💥 Tổng sát thương: `{res['damage']:,}`\n⚔️ Sát thương/lượt: `{res['damage_per_turn']:,}`\n🔄 Số lượt: `{res['turns']}`\n🛡️ Sát thương nhận: `{res['taken']:,}`\n\n" +
+                    (f"🏆 **Raid thành công!**\n💎 +`{res['fragment']:,}`\n💰 +`{res['coin']:,}`\n⭐ +`{res['xp']:,}`" if res['win'] else "❌ **Raid thất bại!** Chưa nhận thưởng.")),
                 color=0x2ECC71 if res['win'] else 0xE74C3C)
             await i.response.edit_message(embed=em, view=RaidView(self.user_id))
         return cb
     async def _prev(self, i):
         if i.user.id != self.user_id: return
-        await i.response.edit_message(embed=build_raid_menu_embed(player_data[self.user_id]),
+        await i.response.edit_message(embed=build_raid_menu_embed(player_data[self.user_id], self.page - 1),
             view=RaidView(self.user_id, self.page - 1))
     async def _next(self, i):
         if i.user.id != self.user_id: return
-        await i.response.edit_message(embed=build_raid_menu_embed(player_data[self.user_id]),
+        await i.response.edit_message(embed=build_raid_menu_embed(player_data[self.user_id], self.page + 1),
             view=RaidView(self.user_id, self.page + 1))
     async def _back(self, i):
         if i.user.id != self.user_id:
             await i.response.send_message("⚠️ Không phải bạn!", ephemeral=True); return
-        await i.response.edit_message(embed=build_farm_embed(player_data[self.user_id]), view=FarmView(self.user_id))
+        p = player_data[self.user_id]
+        faction = p.get("faction", "<a:Pirates:1553609978709938217> Hải Tặc")
+        await i.response.edit_message(
+            embed=build_game_embed(faction, self.user_id),
+            view=GameMenuView(faction, self.user_id)
+        )
 
 # ══════════════════════════════════════════════════════════════════
 # 💰 BOUNTY VIEW

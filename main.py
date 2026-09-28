@@ -4098,10 +4098,10 @@ class ChooseFactionView(discord.ui.View):
         # Không tự hết hạn. Người chơi có thể chọn phe bất cứ lúc nào.
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Hải Tặc", emoji="<a:Pirates:1553609978709938217>", style=discord.ButtonStyle.danger, custom_id="birthdaytime_onepiece_pirate")
+    @discord.ui.button(label="Hải Tặc", emoji="🏴‍☠️", style=discord.ButtonStyle.danger, custom_id="birthdaytime_onepiece_pirate")
     async def pirate(self, i, b): await self._pick(i, "<a:5130shivermetimbers:1553605985690456094> Hải Tặc")
 
-    @discord.ui.button(label="Hải Quân", emoji="<a:Marines:1553609770332717056>", style=discord.ButtonStyle.primary, custom_id="birthdaytime_onepiece_marine")
+    @discord.ui.button(label="Hải Quân", emoji="⚓", style=discord.ButtonStyle.primary, custom_id="birthdaytime_onepiece_marine")
     async def marine(self, i, b): await self._pick(i, "<a:Marines:1553609770332717056> Hải Quân")
 
     async def _pick(self, interaction, faction):

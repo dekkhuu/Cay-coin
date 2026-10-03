@@ -240,7 +240,7 @@ VN_TZ = datetime.timezone(datetime.timedelta(hours=7))
 
 def add_standard_footer(embed: discord.Embed):
     now_vn = datetime.datetime.now(VN_TZ)
-    embed.set_footer(text=f"by w.dec • 🇻🇳 {now_vn.strftime('%H:%M:%S %d/%m/%Y')}")
+    embed.set_footer(text="by ph.huyy.")
     embed.timestamp = now_vn
     return embed
 
@@ -2492,6 +2492,40 @@ NOITU_WORDS = [
     "nghĩa vụ", "vụ mùa", "mùa màng", "màng nhện", "nhện giăng", "giăng lưới",
     "lưới điện", "điện tử", "tử tế", "tế nhị", "nhịp tim", "tim mạch",
     "mạch nước", "nước suối", "suối nguồn", "nguồn điện", "điện thoại", "thoại văn",
+    # Kho từ bổ sung theo danh sách người dùng cung cấp
+    "khẽ khàng", "may mắn", "lặn lội", "dinh thự", "thi thố", "non choẹt",
+    "thiếu thốn", "mạng nhện", "nhã nhặn", "phòng ngừa", "vực thẳm", "mai mốt",
+    "xích thố", "nhăng nhít", "vặt vãnh", "vật vã", "lặng thinh", "bẩn thỉu",
+    "ướt át", "non nớt", "già nua", "đẹp đẽ", "bạc bẽo", "điện thoại", "thôi nôi",
+    "nhảy nhót", "y hệt", "kém cỏi", "hẹp hòi", "hài hước", "xé toạc", "đậu nành",
+    "ban phước", "lụt lội", "khoẻ khoắn", "xôi gấc", "tròn trịa", "nhóng nhánh",
+    "bóng bẩy", "râu ria", "xanh biếc", "bê bết", "giới thiệu", "thõng thẹo",
+    "đàm thoại", "tù và", "khỏe khoắn", "gọn ghẽ", "châu chấu", "lẻo mép",
+    "mượn cớ", "gió bấc", "ngại ngùng", "ngất xỉu", "mạnh mẽ", "khỏe khắn", "rũ rượi",
+    "bùi nhùi", "cà khịa", "dẻo nhẹo", "cho rằng", "bản nháp", "bọn nó", "cá cược",
+    "cao kều", "cao vút", "con nít", "cũ rích", "chỉ trỏ", "chi nhánh", "chiền chiện",
+    "chích choè", "chua loét", "chút xíu", "dai nhách", "danh tánh", "dàng dênh",
+    "dành dụm", "đâu đấy", "đậu hũ", "đèn đóm", "điên khùng", "đùa giỡn", "già khằn",
+    "hậu hĩnh", "hậu duệ", "hệ lụy", "hè hụi", "hệ luỵ", "hình nộm", "họa hoằn",
+    "hoa hoè", "lạc rang", "lau sậy", "lắng đọng", "lỡ cỡ", "máu mủ", "nể nang",
+    "nợ nần", "nở nang", "ngắt quãng", "ngoan ngoãn", "ngờ ngợ", "nhiễm khuẩn", "ông kẹ",
+    "quan thoại", "sao Hỏa", "thoát khỏi", "thở phào", "trắng trẻo", "tròn xoe", "u nang",
+    "vai vế", "viện cớ", "vốn liếng", "vời vợi", "vơ vét", "vuông vức", "vững chãi",
+    "xá xị", "xoá nhoà", "xoàn xoạt", "xộn xạo", "yếu xìu", "an ủi", "bi đát",
+    "bì bõm", "biệt thự", "cằn nhằn", "chạy chọt", "chặt chẽ", "chiều chuộng", "chứa đựng",
+    "da diết", "dai dẳng", "da dẻ", "dan díu", "dầm dề", "dịch tễ", "dữ tợn", "đà điểu",
+    "gạo lức", "gói ghém", "giá buốt", "giao thoa", "giận dỗi", "giống hệt", "hào nhoáng",
+    "hắt hủi", "họa mi", "hỏi han", "hờn dỗi", "kia kìa", "kiệt quệ", "kính lúp", "khách khứa",
+    "khắc khoải", "khờ khạo", "lã chã", "lác đác", "làm thinh", "lạnh buốt", "lầy lội", "lõng bõng",
+    "lươn lẹo", "lưỡng lự", "man mác", "màng nhện", "mát mẻ", "mình mẩy", "mới toanh", "mới mẻ",
+    "nâng niu", "nuôi nấng", "nước nôi", "nghèo nàn", "nghịch ngợm", "ngọt lịm", "ngộ nghĩnh",
+    "người ngợm", "nhai nhải", "nham nhở", "nhan nhản", "nhắc nhở", "nhặt nhạnh", "nhấm nháp",
+    "nhắng nhít", "nhằng nhịt", "nhắn nhủ", "nhầy nhụa", "nhí nhảnh", "nhọn hoắt", "nhoi nhói",
+    "nhọc nhằn", "ốc bươu", "ơi ới", "phẳng phiu", "quỷ quyệt", "ra rìa", "rác rưởi", "sai khiến",
+    "say sưa", "sâu thẳm", "sợ sệt", "sờ soạng", "sườn sượt", "tài xỉu", "tan tành", "tanh tưởi",
+    "tăm tắp", "tấp nập", "tập tành", "tôi tớ", "tục tĩu", "tươi tắn", "thà rằng", "thai nghén",
+    "tháo vát", "thăm nom", "thần thoại", "thoi thóp", "thòng lọng", "thơm tho", "thủ thỉ", "thứ bảy",
+    "thưa thớt", "thừa thãi", "trần truồng", "trong trẻo", "vi khuẩn", "xám xịt", "xảo quyệt", "xe cộ",
 ]
 
 

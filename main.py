@@ -1665,7 +1665,7 @@ class SnakeView(discord.ui.View):
             f"{self._board_text()}"
         )
         if not self.game_over:
-            description += "\n\n          ⬆️\n   ⬅️  ⬇️  ➡️"
+            description += "\n\n          
         if status:
             description += f"\n\n{status}"
 
